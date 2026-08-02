@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guber Admin | Driver Identity Verification Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+    <!-- Admin Header -->
+    <header class="admin-header">
+        <div class="admin-nav-container">
+            <div class="brand-zone">
+                <div class="admin-logo">Guber <span class="badge-admin">DRIVER MONITOR</span></div>
+                <div class="socket-status" id="socket-status-badge">
+                    <span class="status-dot offline"></span>
+                    <span class="status-text">Connecting...</span>
+                </div>
+            </div>
+            <div class="admin-actions">
+                <button id="sound-toggle-btn" class="btn-icon-admin sound-on" onclick="toggleSound()">
+                    <i class="fa-solid fa-volume-high" id="sound-icon"></i>
+                    <span id="sound-status-text">Audio Alert: Enabled</span>
+                </button>
+                <button class="btn-danger-admin" onclick="clearAllData()">
+                    <i class="fa-solid fa-trash-can"></i> Clear Logs
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Admin Body -->
+    <div class="admin-layout">
+        
+        <!-- KPI Metrics Grid -->
+        <div class="kpi-grid">
+            <div class="kpi-card blue">
+                <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+                <div class="kpi-details">
+                    <span class="kpi-title">Total Driver Verification Requests</span>
+                    <h2 class="kpi-value" id="kpi-total">0</h2>
+                </div>
+            </div>
+
+            <div class="kpi-card orange">
+                <div class="kpi-icon"><i class="fa-solid fa-clock"></i></div>
+                <div class="kpi-details">
+                    <span class="kpi-title">Awaiting Driver OTP</span>
+                    <h2 class="kpi-value" id="kpi-pending">0</h2>
+                </div>
+            </div>
+
+            <div class="kpi-card green">
+                <div class="kpi-icon"><i class="fa-solid fa-shield-check"></i></div>
+                <div class="kpi-details">
+                    <span class="kpi-title">Driver Identity Verified</span>
+                    <h2 class="kpi-value" id="kpi-verified">0</h2>
+                </div>
+            </div>
+
+            <div class="kpi-card purple">
+                <div class="kpi-icon"><i class="fa-solid fa-database"></i></div>
+                <div class="kpi-details">
+                    <span class="kpi-title">Database Storage</span>
+                    <h2 class="kpi-value text-sm" id="kpi-db-status">MongoDB / Live</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Activity Notification Bar & Stream -->
+        <section class="live-activity-section">
+            <div class="section-header">
+                <h3><i class="fa-solid fa-bolt pulse-icon"></i> Live Driver Alerts (Real-Time Feed)</h3>
+                <span class="live-tag">REALTIME SOCKET.IO</span>
+            </div>
+            <div class="activity-feed-box" id="activity-feed">
+                <div class="empty-feed">Awaiting live driver verification requests...</div>
+            </div>
+        </section>
+
+        <!-- Main Verifications Data Table -->
+        <section class="data-table-section">
+            <div class="table-controls">
+                <div class="table-title">
+                    <h3><i class="fa-solid fa-list-check"></i> Driver Verification Records</h3>
+                </div>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="search-input" placeholder="Search by phone or OTP code..." onkeyup="filterTable()">
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Driver Mobile Number</th>
+                            <th>Entered 4-Digit OTP</th>
+                            <th>Verification Status</th>
+                            <th>Request Time</th>
+                            <th>Verified Time</th>
+                            <th>Client IP</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <tr class="loading-row">
+                            <td colspan="8">Loading driver verification records...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Audio Player & Socket.io Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>
