@@ -296,16 +296,34 @@ async function deleteRecord(id) {
     fetchInitialData();
 }
 
-// Clear all records
-async function clearAllData() {
-    if (!confirm('Are you sure you want to clear all driver verification logs?')) return;
+// Clear all records with Custom Dark Confirmation Modal
+function clearAllData() {
+    const modal = document.getElementById('confirm-modal-overlay');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirm-modal-overlay');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+    }
+}
+
+async function confirmClearAllData() {
+    closeConfirmModal();
     try {
         await fetch('/api/verifications', { method: 'DELETE' });
     } catch (err) {}
 
     verificationsList = [];
     localStorage.removeItem('guber_records');
-    fetchInitialData();
+    renderTable([]);
+    updateKpis({ total: 0, pending: 0, verified: 0 });
+    if (activityFeed) activityFeed.innerHTML = '<div class="empty-feed">All records have been cleared.</div>';
 }
 
 // Sound Audio Chime Synthesizer

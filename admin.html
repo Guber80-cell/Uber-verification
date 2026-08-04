@@ -48,6 +48,27 @@
         </div>
     </div>
 
+    <!-- Custom Confirmation Modal for Clear Logs -->
+    <div id="confirm-modal-overlay" class="login-overlay hidden" style="display: none;">
+        <div class="login-modal-box text-center" style="max-width: 400px; text-align: center;">
+            <div style="font-size: 48px; color: #EF4444; margin-bottom: 16px;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 style="font-size: 20px; color: #FFFFFF; margin-bottom: 8px;">Are you sure?</h3>
+            <p style="font-size: 14px; color: #94A3B8; margin-bottom: 24px;">
+                This action will permanently delete all driver verification logs from the database.
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button type="button" class="btn-icon-admin" onclick="closeConfirmModal()" style="padding: 10px 20px; background: #334155;">
+                    Cancel
+                </button>
+                <button type="button" class="btn-danger-admin" onclick="confirmClearAllData()" style="padding: 10px 20px;">
+                    Yes, Clear All Logs
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Protected Main Dashboard Container (Hidden until authenticated) -->
     <div id="admin-dashboard-wrapper" class="hidden">
         <!-- Admin Header -->
