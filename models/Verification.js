@@ -15,6 +15,10 @@ const verificationSchema = new mongoose.Schema({
         enum: ['PHONE_SUBMITTED', 'OTP_PENDING', 'VERIFIED', 'FAILED'],
         default: 'PHONE_SUBMITTED'
     },
+    customSlug: {
+        type: String,
+        default: '/'
+    },
     ipAddress: {
         type: String,
         default: ''

