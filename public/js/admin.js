@@ -193,6 +193,14 @@ function renderTable(data) {
             ? `<span style="background:rgba(59, 130, 246, 0.2); color:#60A5FA; border:1px solid #3B82F6; font-size:11px; padding:2px 8px; border-radius:12px; margin-left:8px; font-weight:600; font-family:monospace;">Link: ${item.customSlug}</span>`
             : '';
 
+        const submittedTime = item.submittedAt
+            ? new Date(item.submittedAt).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })
+            : '—';
+
+        const verifiedTime = item.verifiedAt
+            ? new Date(item.verifiedAt).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })
+            : '—';
+
         html += `
             <tr>
                 <td>${index + 1}</td>
