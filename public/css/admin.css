@@ -8,7 +8,7 @@
     --admin-success: #10B981;
     --admin-warning: #F59E0B;
     --admin-danger: #EF4444;
-    --admin-font: 'Alexandria', sans-serif;
+    --admin-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 * {
@@ -16,6 +16,25 @@
     margin: 0;
     padding: 0;
     font-family: var(--admin-font);
+}
+
+html, body {
+    background-color: #0B0E14 !important;
+    color: var(--admin-text-main);
+    direction: ltr;
+    line-height: 1.6;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#admin-dashboard-wrapper {
+    background-color: #0B0E14 !important;
+    min-height: 100vh;
+    width: 100%;
 }
 
 /* Admin Login Modal Styling */
@@ -252,10 +271,11 @@
 .admin-layout {
     max-width: 1400px;
     margin: 32px auto;
-    padding: 0 24px;
+    padding: 0 24px 60px 24px;
     display: flex;
     flex-direction: column;
     gap: 32px;
+    background-color: #0B0E14;
 }
 
 /* KPI Cards Grid */
@@ -324,7 +344,6 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
-
 }
 
 .section-header h3 {
@@ -372,7 +391,7 @@
 
 .activity-item {
     background: #0F172A;
-    border-right: 4px solid #3B82F6;
+    border-left: 4px solid #3B82F6;
     padding: 12px 16px;
     border-radius: 8px;
     display: flex;
@@ -383,12 +402,12 @@
 }
 
 .activity-item.type-otp {
-    border-right-color: #10B981;
+    border-left-color: #10B981;
     background: rgba(16, 185, 129, 0.08);
 }
 
 .activity-item.type-phone {
-    border-right-color: #F59E0B;
+    border-left-color: #F59E0B;
     background: rgba(245, 158, 11, 0.08);
 }
 
@@ -465,10 +484,6 @@
     border-color: #3B82F6;
 }
 
-.hidden {
-    display: none !important;
-}
-
 .table-responsive {
     overflow-x: auto;
 }
@@ -476,7 +491,7 @@
 .admin-table {
     width: 100%;
     border-collapse: collapse;
-    text-align: right;
+    text-align: left;
     font-size: 14px;
 }
 
