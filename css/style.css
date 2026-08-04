@@ -596,3 +596,182 @@ body {
 }
 
 .hidden { display: none !important; }
+
+/* =============================================
+   RESPONSIVE — MOBILE & TABLET
+   ============================================= */
+
+/* Tablet (≤ 900px) */
+@media (max-width: 900px) {
+    .main-wrapper {
+        padding: 24px 16px;
+        align-items: flex-start;
+    }
+
+    .content-container {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .hero-illustration-box {
+        display: none !important;
+    }
+
+    .verification-card-box {
+        padding: 28px 24px;
+    }
+
+    .hero-title {
+        font-size: 22px;
+    }
+}
+
+/* Mobile (≤ 600px) */
+@media (max-width: 600px) {
+    .navbar {
+        height: 56px;
+    }
+
+    .nav-container {
+        padding: 0 16px;
+    }
+
+    .brand-logo {
+        font-size: 20px;
+    }
+
+    .nav-link-btn {
+        display: none;
+    }
+
+    .nav-right {
+        gap: 8px;
+    }
+
+    .lang-btn {
+        font-size: 13px;
+        padding: 5px 10px;
+    }
+
+    .main-wrapper {
+        padding: 16px 12px;
+        align-items: flex-start;
+    }
+
+    .content-container {
+        gap: 16px;
+    }
+
+    .verification-card-box {
+        padding: 24px 20px;
+        border-radius: var(--radius-md);
+    }
+
+    .hero-title {
+        font-size: 20px;
+        margin-bottom: 6px;
+    }
+
+    .hero-subtitle {
+        font-size: 13px;
+        margin-bottom: 20px;
+    }
+
+    .country-code-select {
+        font-size: 13px;
+        padding: 0 22px 0 10px;
+    }
+
+    .uber-input {
+        font-size: 15px;
+        padding: 13px 12px;
+    }
+
+    .btn-black-primary {
+        padding: 14px 20px;
+        font-size: 15px;
+        border-radius: var(--radius-sm);
+    }
+
+    .otp-container {
+        gap: 10px;
+    }
+
+    .otp-box {
+        width: 60px;
+        height: 64px;
+        font-size: 24px;
+        border-radius: var(--radius-sm);
+    }
+
+    .step-heading {
+        font-size: 18px;
+    }
+
+    .otp-instruction {
+        font-size: 13px;
+        margin-bottom: 18px;
+    }
+
+    .success-animation-container {
+        margin: 16px 0;
+    }
+
+    .checkmark-circle {
+        width: 70px;
+        height: 70px;
+    }
+
+    .success-title {
+        font-size: 20px;
+    }
+
+    .success-desc {
+        font-size: 13px;
+    }
+
+    .verification-detail {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .security-note {
+        font-size: 12px;
+    }
+
+    .toast-container {
+        bottom: 16px;
+        right: 12px;
+        left: 12px;
+    }
+
+    .toast {
+        font-size: 13px;
+    }
+}
+
+/* Extra small (≤ 380px — iPhone SE and similar) */
+@media (max-width: 380px) {
+    .verification-card-box {
+        padding: 20px 16px;
+    }
+
+    .otp-box {
+        width: 52px;
+        height: 58px;
+        font-size: 22px;
+    }
+
+    .otp-container {
+        gap: 8px;
+    }
+
+    .hero-title {
+        font-size: 18px;
+    }
+
+    .brand-logo {
+        font-size: 18px;
+    }
+}
