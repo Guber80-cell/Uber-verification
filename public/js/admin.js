@@ -49,10 +49,11 @@ function checkAdminAuth() {
 
 function handleAdminLogin(e) {
     e.preventDefault();
-    const userVal = document.getElementById('admin-user-input').value.trim();
+    const userVal = document.getElementById('admin-user-input').value.trim().toLowerCase();
     const passVal = document.getElementById('admin-pass-input').value.trim();
 
-    if (userVal === ADMIN_USER && passVal === ADMIN_PASS) {
+    // Flexible password check for guber123321 / Guber123321
+    if (userVal === ADMIN_USER && (passVal === ADMIN_PASS || passVal.toLowerCase() === ADMIN_PASS)) {
         sessionStorage.setItem('guber_admin_auth', 'true');
         if (loginErrorMsg) loginErrorMsg.classList.add('hidden');
         checkAdminAuth();
