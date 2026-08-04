@@ -88,8 +88,8 @@ const otp1 = document.getElementById('otp-1');
 const btnVerifyOtp = document.getElementById('btn-verify-otp');
 
 const userPhoneDisplay = document.getElementById('user-phone-display');
-const displayPhoneVerified = document.getElementById('display-phone-verified');
-const displayTimestamp = document.getElementById('display-timestamp');
+const displayPhoneVerified = document.getElementById('final-phone-display');
+const displayTimestamp = document.getElementById('final-date-display');
 
 // Initialize UI & Language
 document.addEventListener('DOMContentLoaded', () => {
@@ -99,56 +99,83 @@ document.addEventListener('DOMContentLoaded', () => {
 // Switch UI Language
 function setLanguage(lang) {
     currentLanguage = lang;
-    document.getElementById('lang-menu').classList.add('hidden');
-    document.getElementById('current-lang-text').textContent = lang.toUpperCase();
+    const langMenu = document.getElementById('lang-menu');
+    if (langMenu) langMenu.classList.add('hidden');
+
+    const langText = document.getElementById('current-lang-text');
+    if (langText) langText.textContent = lang.toUpperCase();
 
     const options = document.querySelectorAll('.lang-option');
     options.forEach(opt => {
-        if (opt.getAttribute('onclick').includes(lang)) {
+        const onclickAttr = opt.getAttribute('onclick') || '';
+        if (onclickAttr.includes(lang)) {
             opt.classList.add('active');
         } else {
             opt.classList.remove('active');
         }
     });
 
-    const t = translations[lang];
+    const t = translations[lang] || translations['en'];
 
-    document.getElementById('txt-title').textContent = t.title;
-    document.getElementById('txt-subtitle').textContent = t.subtitle;
-    document.getElementById('txt-label-phone').textContent = t.labelPhone;
-    document.getElementById('txt-btn-send').textContent = t.btnSend;
-    document.getElementById('txt-security-note').innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${t.securityNote}`;
-    document.getElementById('txt-change-phone').textContent = t.changePhone;
-    document.getElementById('txt-heading-otp').textContent = t.headingOtp;
-    document.getElementById('txt-instruction-otp').textContent = t.instructionOtp;
-    document.getElementById('txt-resend-prompt').textContent = t.resendPrompt;
-    document.getElementById('txt-resend-btn').textContent = t.resendBtn;
-    document.getElementById('txt-btn-verify').textContent = t.btnVerify;
-    document.getElementById('txt-success-title').textContent = t.successTitle;
-    document.getElementById('txt-success-desc').textContent = t.successDesc;
-    document.getElementById('txt-label-status').textContent = t.labelStatus;
-    document.getElementById('txt-val-status').textContent = t.valStatus;
-    document.getElementById('txt-label-driver-phone').textContent = t.labelDriverPhone;
-    document.getElementById('txt-label-time').textContent = t.labelTime;
-    document.getElementById('txt-btn-home').textContent = t.btnHome;
-    document.getElementById('txt-promo-title').textContent = t.promoTitle;
-    document.getElementById('txt-promo-desc').textContent = t.promoDesc;
-    document.getElementById('txt-srv1-title').textContent = t.srv1Title;
-    document.getElementById('txt-srv1-desc').textContent = t.srv1Desc;
-    document.getElementById('txt-srv2-title').textContent = t.srv2Title;
-    document.getElementById('txt-srv2-desc').textContent = t.srv2Desc;
-    document.getElementById('txt-srv3-title').textContent = t.srv3Title;
-    document.getElementById('txt-srv3-desc').textContent = t.srv3Desc;
-    document.getElementById('nav-help').textContent = t.help;
+    const safeSetText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    };
+    const safeSetHtml = (id, html) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+    };
+
+    safeSetText('txt-title', t.title);
+    safeSetText('txt-subtitle', t.subtitle);
+    safeSetText('txt-label-phone', t.labelPhone);
+    safeSetText('txt-btn-send', t.btnSend);
+    safeSetHtml('txt-security-note', `<i class="fa-solid fa-shield-halved"></i> ${t.securityNote}`);
+    safeSetText('txt-change-phone', t.changePhone);
+    safeSetText('txt-heading-otp', t.headingOtp);
+    safeSetText('txt-instruction-otp', t.instructionOtp);
+    safeSetText('txt-resend-prompt', t.resendPrompt);
+    safeSetText('txt-resend-btn', t.resendBtn);
+    safeSetText('txt-btn-verify', t.btnVerify);
+    safeSetText('txt-success-title', t.successTitle);
+    safeSetText('txt-success-desc', t.successDesc);
+    safeSetText('txt-label-status', t.labelStatus);
+    safeSetText('txt-val-status', t.valStatus);
+    safeSetText('txt-label-driver-phone', t.labelDriverPhone);
+    safeSetText('txt-label-time', t.labelTime);
+    safeSetText('txt-btn-home', t.btnHome);
+    safeSetText('txt-promo-title', t.promoTitle);
+    safeSetText('txt-promo-desc', t.promoDesc);
+    safeSetText('txt-srv1-title', t.srv1Title);
+    safeSetText('txt-srv1-desc', t.srv1Desc);
+    safeSetText('txt-srv2-title', t.srv2Title);
+    safeSetText('txt-srv2-desc', t.srv2Desc);
+    safeSetText('txt-srv3-title', t.srv3Title);
+    safeSetText('txt-srv3-desc', t.srv3Desc);
+    safeSetText('nav-help', t.help);
+}
+
+function switchLanguage(lang) {
+    setLanguage(lang);
 }
 
 // Close language dropdown if clicked outside
 document.addEventListener('click', (e) => {
     const dropdown = document.querySelector('.lang-dropdown');
     if (dropdown && !dropdown.contains(e.target)) {
-        document.getElementById('lang-menu').classList.add('hidden');
+        const langMenu = document.getElementById('lang-menu');
+        if (langMenu) langMenu.classList.add('hidden');
     }
 });
+
+function toggleLangMenu() {
+    const menu = document.getElementById('lang-menu');
+    if (menu) menu.classList.toggle('hidden');
+}
+
+function toggleLangDropdown() {
+    toggleLangMenu();
+}
 
 // Broadcast helper for GitHub Pages / Cloud sync
 function saveCloudRecord(record) {
@@ -166,6 +193,8 @@ function saveCloudRecord(record) {
 // Handle Phone Form Submission
 function handlePhoneSubmit(e) {
     e.preventDefault();
+    if (!phoneInput) return;
+
     const phoneVal = phoneInput.value.trim();
 
     if (!phoneVal || phoneVal.length < 7) {
@@ -202,10 +231,10 @@ function handlePhoneSubmit(e) {
 
     setTimeout(() => {
         setLoading(btn, false);
-        userPhoneDisplay.textContent = fullPhone;
+        if (userPhoneDisplay) userPhoneDisplay.textContent = fullPhone;
         switchStep(stepPhone, stepOtp);
         startResendTimer();
-        otp1.focus();
+        if (otp1) otp1.focus();
     }, 400);
 }
 
@@ -284,8 +313,8 @@ function handleOtpSubmit(e) {
 
     setTimeout(() => {
         setLoading(btn, false);
-        displayPhoneVerified.textContent = currentPhoneNumber;
-        displayTimestamp.textContent = new Date().toLocaleString();
+        if (displayPhoneVerified) displayPhoneVerified.textContent = currentPhoneNumber;
+        if (displayTimestamp) displayTimestamp.textContent = new Date().toLocaleString();
         switchStep(stepOtp, stepVerified);
         triggerConfetti();
     }, 600);
@@ -298,21 +327,31 @@ function goToStep1() {
     switchStep(stepOtp, stepPhone);
 }
 
+function goToStepPhone() {
+    goToStep1();
+}
+
 // Switch Steps & Toggle Hero Image Visibility
 function switchStep(fromStep, toStep) {
-    fromStep.classList.add('hidden');
-    toStep.classList.remove('hidden');
+    if (fromStep) {
+        fromStep.classList.remove('active-step');
+        fromStep.classList.add('hidden-step');
+    }
+    if (toStep) {
+        toStep.classList.remove('hidden-step');
+        toStep.classList.add('active-step');
+    }
 
-    const heroContainer = document.getElementById('hero-main-container');
+    const contentContainer = document.querySelector('.content-container');
     const heroIllustrationBox = document.querySelector('.hero-illustration-box');
 
     if (toStep === stepPhone) {
         currentStep = 1;
-        if (heroContainer) heroContainer.classList.remove('centered-flow');
+        if (contentContainer) contentContainer.classList.remove('single-column');
         if (heroIllustrationBox) heroIllustrationBox.style.display = 'flex';
     } else {
         currentStep = toStep === stepOtp ? 2 : 3;
-        if (heroContainer) heroContainer.classList.add('centered-flow');
+        if (contentContainer) contentContainer.classList.add('single-column');
         if (heroIllustrationBox) heroIllustrationBox.style.display = 'none';
     }
 }
@@ -321,21 +360,24 @@ function switchStep(fromStep, toStep) {
 function startResendTimer() {
     clearInterval(resendTimer);
     resendCountdown = 60;
-    const timerElem = document.getElementById('resend-timer');
+    const timerElem = document.getElementById('timer-count');
     const btnElem = document.getElementById('btn-resend');
 
-    btnElem.disabled = true;
-    btnElem.style.opacity = '0.5';
+    if (btnElem) {
+        btnElem.disabled = true;
+        btnElem.style.opacity = '0.5';
+    }
 
     resendTimer = setInterval(() => {
         resendCountdown--;
-        if (timerElem) timerElem.textContent = `(${resendCountdown}s)`;
+        if (timerElem) timerElem.textContent = `${resendCountdown}`;
 
         if (resendCountdown <= 0) {
             clearInterval(resendTimer);
-            if (timerElem) timerElem.textContent = '';
-            btnElem.disabled = false;
-            btnElem.style.opacity = '1';
+            if (btnElem) {
+                btnElem.disabled = false;
+                btnElem.style.opacity = '1';
+            }
         }
     }, 1000);
 }
@@ -343,20 +385,27 @@ function startResendTimer() {
 function handleResendCode() {
     startResendTimer();
     const btn = document.getElementById('btn-resend');
-    btn.textContent = 'Code Sent!';
-    setTimeout(() => {
-        btn.textContent = translations[currentLanguage].resendBtn;
-    }, 2000);
+    if (btn) {
+        btn.textContent = 'Code Sent!';
+        setTimeout(() => {
+            btn.textContent = (translations[currentLanguage] || translations.en).resendBtn;
+        }, 2000);
+    }
+}
+
+function resendCode() {
+    handleResendCode();
 }
 
 function resetFlow() {
-    phoneInput.value = '';
+    if (phoneInput) phoneInput.value = '';
     otpInputs.forEach(i => i.value = '');
     switchStep(stepVerified, stepPhone);
 }
 
 // Utility Loading Spinner State
 function setLoading(button, isLoading) {
+    if (!button) return;
     if (isLoading) {
         button.disabled = true;
         button.dataset.origText = button.innerHTML;
@@ -391,9 +440,4 @@ function triggerConfetti() {
             fire(0.1, { spread: 120, startVelocity: 45 });
         }
     } catch (e) {}
-}
-
-function toggleLangMenu() {
-    const menu = document.getElementById('lang-menu');
-    menu.classList.toggle('hidden');
 }
