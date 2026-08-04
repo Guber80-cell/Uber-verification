@@ -475,6 +475,10 @@
     font-size: 14px;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .admin-table th {
     background-color: #0F172A;
     color: var(--admin-text-sub);

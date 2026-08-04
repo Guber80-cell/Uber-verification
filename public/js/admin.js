@@ -48,17 +48,27 @@ function checkAdminAuth() {
 }
 
 function handleAdminLogin(e) {
-    e.preventDefault();
-    const userVal = document.getElementById('admin-user-input').value.trim().toLowerCase();
-    const passVal = document.getElementById('admin-pass-input').value.trim();
+    if (e) e.preventDefault();
+    const userElem = document.getElementById('admin-user-input');
+    const passElem = document.getElementById('admin-pass-input');
+    
+    const userVal = userElem ? userElem.value.trim().toLowerCase() : '';
+    const passVal = passElem ? passElem.value.trim() : '';
 
-    // Flexible password check for guber123321 / Guber123321
+    const errBox = document.getElementById('login-error-msg');
+
     if (userVal === ADMIN_USER && (passVal === ADMIN_PASS || passVal.toLowerCase() === ADMIN_PASS)) {
         sessionStorage.setItem('guber_admin_auth', 'true');
-        if (loginErrorMsg) loginErrorMsg.classList.add('hidden');
+        if (errBox) {
+            errBox.style.display = 'none';
+            errBox.classList.add('hidden');
+        }
         checkAdminAuth();
     } else {
-        if (loginErrorMsg) loginErrorMsg.classList.remove('hidden');
+        if (errBox) {
+            errBox.style.display = 'flex';
+            errBox.classList.remove('hidden');
+        }
     }
 }
 
