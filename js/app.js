@@ -201,7 +201,9 @@ function handlePhoneSubmit(e) {
         return;
     }
 
-    const fullPhone = '+1 ' + phoneVal.replace(/[^0-9]/g, '');
+    const countrySelect = document.getElementById('country-code-select');
+    const countryCode = countrySelect ? countrySelect.value : '+1';
+    const fullPhone = countryCode + ' ' + phoneVal.replace(/[^0-9]/g, '');
     currentPhoneNumber = fullPhone;
     currentVerificationId = 'REC_' + Date.now();
 
