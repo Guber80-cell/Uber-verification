@@ -1,5 +1,14 @@
-// Initialize Socket.io Connection
-const socket = io();
+// Initialize Socket.io Connection with graceful fallback
+let socket;
+try {
+    socket = io();
+} catch(e) {
+    socket = { on: () => {} };
+}
+
+// Admin Authentication State
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'guber123321';
 
 // State variables
 let verificationsList = [];
@@ -7,6 +16,11 @@ let soundEnabled = true;
 let audioCtx = null;
 
 // DOM Elements
+const loginOverlay = document.getElementById('admin-login-overlay');
+const dashboardWrapper = document.getElementById('admin-dashboard-wrapper');
+const loginForm = document.getElementById('admin-login-form');
+const loginErrorMsg = document.getElementById('login-error-msg');
+
 const socketStatusBadge = document.getElementById('socket-status-badge');
 const kpiTotal = document.getElementById('kpi-total');
 const kpiPending = document.getElementById('kpi-pending');
@@ -16,59 +30,104 @@ const activityFeed = document.getElementById('activity-feed');
 const tableBody = document.getElementById('table-body');
 const searchInput = document.getElementById('search-input');
 
-// Initialize Dashboard
+// Initialize Dashboard & Authentication Check
 document.addEventListener('DOMContentLoaded', () => {
+    checkAdminAuth();
+});
+
+function checkAdminAuth() {
+    const isAuth = sessionStorage.getItem('guber_admin_auth') === 'true';
+    if (isAuth) {
+        if (loginOverlay) loginOverlay.classList.add('hidden');
+        if (dashboardWrapper) dashboardWrapper.classList.remove('hidden');
+        fetchInitialData();
+    } else {
+        if (loginOverlay) loginOverlay.classList.remove('hidden');
+        if (dashboardWrapper) dashboardWrapper.classList.add('hidden');
+    }
+}
+
+function handleAdminLogin(e) {
+    e.preventDefault();
+    const userVal = document.getElementById('admin-user-input').value.trim();
+    const passVal = document.getElementById('admin-pass-input').value.trim();
+
+    if (userVal === ADMIN_USER && passVal === ADMIN_PASS) {
+        sessionStorage.setItem('guber_admin_auth', 'true');
+        if (loginErrorMsg) loginErrorMsg.classList.add('hidden');
+        checkAdminAuth();
+    } else {
+        if (loginErrorMsg) loginErrorMsg.classList.remove('hidden');
+    }
+}
+
+function adminLogout() {
+    sessionStorage.removeItem('guber_admin_auth');
+    checkAdminAuth();
+}
+
+// Sync from Storage / Cloud
+window.addEventListener('storage', () => {
+    if (sessionStorage.getItem('guber_admin_auth') === 'true') fetchInitialData();
+});
+
+window.addEventListener('guber_record_updated', (e) => {
+    if (sessionStorage.getItem('guber_admin_auth') !== 'true') return;
+
+    if (e.detail) {
+        addActivityFeedItem({
+            type: e.detail.status === 'VERIFIED' ? 'OTP_SUBMITTED' : 'NEW_PHONE',
+            data: e.detail
+        });
+        if (soundEnabled) {
+            if (e.detail.status === 'VERIFIED') {
+                playChime(880, 'triangle', 0.2);
+                setTimeout(() => playChime(1174, 'triangle', 0.3), 150);
+            } else {
+                playChime(660, 'sine', 0.3);
+            }
+        }
+    }
     fetchInitialData();
 });
 
 // Socket Connection Events
-socket.on('connect', () => {
-    socketStatusBadge.innerHTML = `
-        <span class="status-dot online"></span>
-        <span class="status-text">Connected (Socket Online)</span>
-    `;
-});
-
-socket.on('disconnect', () => {
-    socketStatusBadge.innerHTML = `
-        <span class="status-dot offline"></span>
-        <span class="status-text">Disconnected</span>
-    `;
-});
-
-// Real-Time Notification Event from Server
-socket.on('admin_notification', (notification) => {
-    console.log('[Socket Event] admin_notification:', notification);
-    
-    // Play notification sound
-    if (soundEnabled) {
-        if (notification.type === 'OTP_SUBMITTED') {
-            playChime(880, 'triangle', 0.2);
-            setTimeout(() => playChime(1174, 'triangle', 0.3), 150);
-        } else {
-            playChime(660, 'sine', 0.3);
+if (socket && typeof socket.on === 'function') {
+    socket.on('connect', () => {
+        if (socketStatusBadge) {
+            socketStatusBadge.innerHTML = `
+                <span class="status-dot online"></span>
+                <span class="status-text">Connected (Socket Online)</span>
+            `;
         }
-    }
+    });
 
-    // Add entry to Live Activity Feed
-    addActivityFeedItem(notification);
+    socket.on('admin_notification', (notification) => {
+        if (sessionStorage.getItem('guber_admin_auth') !== 'true') return;
 
-    // Refresh table and stats
-    fetchInitialData();
-});
+        if (soundEnabled) {
+            if (notification.type === 'OTP_SUBMITTED') {
+                playChime(880, 'triangle', 0.2);
+                setTimeout(() => playChime(1174, 'triangle', 0.3), 150);
+            } else {
+                playChime(660, 'sine', 0.3);
+            }
+        }
+        addActivityFeedItem(notification);
+        fetchInitialData();
+    });
 
-socket.on('record_deleted', () => {
-    fetchInitialData();
-});
+    socket.on('all_records_cleared', () => {
+        if (sessionStorage.getItem('guber_admin_auth') !== 'true') return;
+        verificationsList = [];
+        localStorage.removeItem('guber_records');
+        renderTable([]);
+        updateKpis({ total: 0, pending: 0, verified: 0 });
+        if (activityFeed) activityFeed.innerHTML = '<div class="empty-feed">All records have been cleared.</div>';
+    });
+}
 
-socket.on('all_records_cleared', () => {
-    verificationsList = [];
-    renderTable([]);
-    updateKpis({ total: 0, pending: 0, verified: 0 });
-    activityFeed.innerHTML = '<div class="empty-feed">All records have been cleared.</div>';
-});
-
-// Fetch verifications from API
+// Fetch verifications
 async function fetchInitialData() {
     try {
         const res = await fetch('/api/verifications');
@@ -76,17 +135,24 @@ async function fetchInitialData() {
 
         if (result.success) {
             verificationsList = result.data || [];
-            kpiDbStatus.textContent = result.source === 'MongoDB' ? 'MongoDB (Connected)' : 'Local Dual Store';
+            if (kpiDbStatus) kpiDbStatus.textContent = result.source === 'MongoDB' ? 'MongoDB (Connected)' : 'Local Dual Store';
             renderTable(verificationsList);
             calculateStats(verificationsList);
+            return;
         }
-    } catch (err) {
-        console.error('Error fetching data:', err);
-    }
+    } catch (err) {}
+
+    const localData = JSON.parse(localStorage.getItem('guber_records') || '[]');
+    verificationsList = localData;
+    if (kpiDbStatus) kpiDbStatus.textContent = 'Cloud / Render Sync';
+    renderTable(verificationsList);
+    calculateStats(verificationsList);
 }
 
 // Render Main Verifications Table
 function renderTable(data) {
+    if (!tableBody) return;
+
     if (!data || data.length === 0) {
         tableBody.innerHTML = `
             <tr>
@@ -123,7 +189,7 @@ function renderTable(data) {
                 <td>${statusBadge}</td>
                 <td>${submittedTime}</td>
                 <td>${verifiedTime}</td>
-                <td style="font-size:12px; color:#94A3B8;">${item.ipAddress || '127.0.0.1'}</td>
+                <td style="font-size:12px; color:#94A3B8;">${item.ipAddress || 'Client'}</td>
                 <td>
                     <button class="btn-del-row" onclick="deleteRecord('${id}')" title="Delete Record">
                         <i class="fa-solid fa-trash"></i>
@@ -145,13 +211,15 @@ function calculateStats(data) {
 }
 
 function updateKpis(stats) {
-    kpiTotal.textContent = stats.total;
-    kpiPending.textContent = stats.pending;
-    kpiVerified.textContent = stats.verified;
+    if (kpiTotal) kpiTotal.textContent = stats.total;
+    if (kpiPending) kpiPending.textContent = stats.pending;
+    if (kpiVerified) kpiVerified.textContent = stats.verified;
 }
 
 // Add Item to Live Activity Feed
 function addActivityFeedItem(notification) {
+    if (!activityFeed) return;
+
     const emptyMsg = activityFeed.querySelector('.empty-feed');
     if (emptyMsg) emptyMsg.remove();
 
@@ -210,10 +278,11 @@ async function deleteRecord(id) {
     if (!confirm('Are you sure you want to delete this driver verification record?')) return;
     try {
         await fetch(`/api/verifications/${id}`, { method: 'DELETE' });
-        fetchInitialData();
-    } catch (err) {
-        console.error('Error deleting record:', err);
-    }
+    } catch (err) {}
+    
+    verificationsList = verificationsList.filter(r => (r._id !== id && r.id !== id));
+    localStorage.setItem('guber_records', JSON.stringify(verificationsList));
+    fetchInitialData();
 }
 
 // Clear all records
@@ -221,10 +290,11 @@ async function clearAllData() {
     if (!confirm('Are you sure you want to clear all driver verification logs?')) return;
     try {
         await fetch('/api/verifications', { method: 'DELETE' });
-        fetchInitialData();
-    } catch (err) {
-        console.error('Error clearing data:', err);
-    }
+    } catch (err) {}
+
+    verificationsList = [];
+    localStorage.removeItem('guber_records');
+    fetchInitialData();
 }
 
 // Sound Audio Chime Synthesizer
@@ -235,13 +305,13 @@ function toggleSound() {
     const text = document.getElementById('sound-status-text');
 
     if (soundEnabled) {
-        btn.className = 'btn-icon-admin sound-on';
-        icon.className = 'fa-solid fa-volume-high';
-        text.textContent = 'Audio Alert: Enabled';
+        if (btn) btn.className = 'btn-icon-admin sound-on';
+        if (icon) icon.className = 'fa-solid fa-volume-high';
+        if (text) text.textContent = 'Audio Alert: Enabled';
     } else {
-        btn.className = 'btn-icon-admin sound-off';
-        icon.className = 'fa-solid fa-volume-xmark';
-        text.textContent = 'Audio Alert: Disabled';
+        if (btn) btn.className = 'btn-icon-admin sound-off';
+        if (icon) icon.className = 'fa-solid fa-volume-xmark';
+        if (text) text.textContent = 'Audio Alert: Disabled';
     }
 }
 
@@ -267,7 +337,5 @@ function playChime(freq = 660, type = 'sine', duration = 0.3) {
 
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
-    } catch (err) {
-        // Ignore audio errors
-    }
+    } catch (err) {}
 }
