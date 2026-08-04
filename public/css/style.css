@@ -651,15 +651,16 @@ body {
 
     .hero-illustration-box {
         display: flex !important;
-        height: 240px;
+        height: auto;
         border-radius: var(--radius-lg);
         overflow: hidden;
     }
 
     .hero-illustration-box img,
     .hero-illustration-box .promo-image {
-        height: 240px;
+        height: 200px;
         object-fit: cover;
+        width: 100%;
     }
 
     .verification-card-box {
