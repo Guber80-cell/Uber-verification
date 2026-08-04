@@ -168,11 +168,8 @@ body {
     max-width: 520px;
 }
 
-@media (max-width: 900px) {
-    .content-container {
-        grid-template-columns: 1fr;
-    }
-}
+
+
 
 /* Left Column Card Box */
 .verification-card-box {
@@ -614,7 +611,16 @@ body {
     }
 
     .hero-illustration-box {
-        display: none !important;
+        display: flex !important;
+        height: 240px;
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+    }
+
+    .hero-illustration-box img,
+    .hero-illustration-box .promo-image {
+        height: 240px;
+        object-fit: cover;
     }
 
     .verification-card-box {
