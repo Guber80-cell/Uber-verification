@@ -123,15 +123,11 @@ app.post('/api/email-settings/recipients', (req, res) => {
 // Test email sending
 app.post('/api/email-settings/test', async (req, res) => {
     try {
-        await emailNotifier.notifyPhoneSubmitted({
-            phoneNumber: '+20 100 000 0000 (TEST)',
-            customSlug: '/test',
-            ipAddress: '127.0.0.1',
-            submittedAt: new Date()
-        });
-        res.json({ success: true, message: 'Test email sent successfully!' });
+        await emailNotifier.sendTestNotification();
+        res.json({ success: true, message: 'تم إرسال إيميل الاختبار بنجاح!' });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        console.error('[TestEmail] Error:', err.message);
+        res.status(400).json({ success: false, message: err.message });
     }
 });
 

