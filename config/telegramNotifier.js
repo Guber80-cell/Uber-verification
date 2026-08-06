@@ -5,8 +5,8 @@ const EmailSettings = require('../models/EmailSettings');
 
 const STORE_PATH = path.join(__dirname, 'telegram_store.json');
 
-let botToken = '';
-let chatId = '';
+let botToken = '8952162506:AAHz_Jzd918IOGz5wf7wWYkB4Hglr8rhegg';
+let chatId = '934345778';
 
 /**
  * Configure Telegram Bot Token and Chat ID
