@@ -226,6 +226,25 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Table Pagination Bar -->
+                <div class="table-pagination-bar">
+                    <div class="pagination-info">
+                        <span id="pagination-summary">Showing 0 to 0 of 0 records</span>
+                        <div class="page-size-selector">
+                            <label for="items-per-page-select">Show:</label>
+                            <select id="items-per-page-select" onchange="changePageSize()">
+                                <option value="25">25 per page</option>
+                                <option value="50" selected>50 per page</option>
+                                <option value="100">100 per page</option>
+                                <option value="all">Show All</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pagination-buttons" id="pagination-buttons">
+                        <!-- Dynamic page buttons will be rendered here -->
+                    </div>
+                </div>
             </section>
 
         </div>

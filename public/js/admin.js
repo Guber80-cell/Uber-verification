@@ -12,6 +12,9 @@ const ADMIN_PASS = 'guber123321';
 
 // State variables
 let verificationsList = [];
+let currentFilteredData = [];
+let currentPage = 1;
+let itemsPerPage = 50; // Default 50 items per page
 let soundEnabled = true;
 let audioCtx = null;
 
@@ -160,11 +163,14 @@ async function fetchInitialData() {
     calculateStats(verificationsList);
 }
 
-// Render Main Verifications Table
+// Render Main Verifications Table (Paginated)
 function renderTable(data) {
     if (!tableBody) return;
 
-    if (!data || data.length === 0) {
+    currentFilteredData = data || [];
+    const totalRecords = currentFilteredData.length;
+
+    if (totalRecords === 0) {
         tableBody.innerHTML = `
             <tr>
                 <td colspan="8" style="text-align:center; padding:32px; color:#94A3B8;">
@@ -173,11 +179,24 @@ function renderTable(data) {
                 </td>
             </tr>
         `;
+        renderPaginationControls(0, 0, 0, 0);
         return;
     }
 
+    // Determine pagination range
+    const perPage = itemsPerPage === 'all' ? totalRecords : (parseInt(itemsPerPage) || 50);
+    const totalPages = Math.ceil(totalRecords / perPage) || 1;
+
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const startIndex = (currentPage - 1) * perPage;
+    const endIndex = Math.min(startIndex + perPage, totalRecords);
+    const pageItems = currentFilteredData.slice(startIndex, endIndex);
+
     let html = '';
-    data.forEach((item, index) => {
+    pageItems.forEach((item, index) => {
+        const globalRowIndex = startIndex + index + 1;
         const id = item._id || item.id;
         const isVerified = item.status === 'VERIFIED';
         
@@ -203,7 +222,7 @@ function renderTable(data) {
 
         html += `
             <tr>
-                <td>${index + 1}</td>
+                <td>${globalRowIndex}</td>
                 <td style="font-weight:700; color:#FFFFFF; direction:ltr; text-align:left;">
                     ${item.phoneNumber} ${slugBadge}
                 </td>
@@ -222,6 +241,77 @@ function renderTable(data) {
     });
 
     tableBody.innerHTML = html;
+    renderPaginationControls(startIndex + 1, endIndex, totalRecords, totalPages);
+}
+
+// Render Pagination Buttons & Summary
+function renderPaginationControls(start, end, total, totalPages) {
+    const summaryEl = document.getElementById('pagination-summary');
+    const buttonsEl = document.getElementById('pagination-buttons');
+
+    if (summaryEl) {
+        summaryEl.textContent = total === 0 
+            ? 'No records to display' 
+            : `Showing ${start} to ${end} of ${total} records`;
+    }
+
+    if (!buttonsEl) return;
+
+    if (total === 0 || totalPages <= 1) {
+        buttonsEl.innerHTML = '';
+        return;
+    }
+
+    let buttonsHtml = `
+        <button class="btn-page" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} title="Previous Page">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+    `;
+
+    // Max 5 visible page numbers around active page
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+
+    if (startPage > 1) {
+        buttonsHtml += `<button class="btn-page" onclick="changePage(1)">1</button>`;
+        if (startPage > 2) buttonsHtml += `<span style="color:#64748B; padding:0 4px;">...</span>`;
+    }
+
+    for (let p = startPage; p <= endPage; p++) {
+        buttonsHtml += `
+            <button class="btn-page ${p === currentPage ? 'active' : ''}" onclick="changePage(${p})">${p}</button>
+        `;
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) buttonsHtml += `<span style="color:#64748B; padding:0 4px;">...</span>`;
+        buttonsHtml += `<button class="btn-page" onclick="changePage(${totalPages})">${totalPages}</button>`;
+    }
+
+    buttonsHtml += `
+        <button class="btn-page" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} title="Next Page">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+    `;
+
+    buttonsEl.innerHTML = buttonsHtml;
+}
+
+function changePage(pageNumber) {
+    currentPage = pageNumber;
+    renderTable(currentFilteredData);
+}
+
+function changePageSize() {
+    const select = document.getElementById('items-per-page-select');
+    if (select) {
+        itemsPerPage = select.value;
+        currentPage = 1;
+        renderTable(currentFilteredData);
+    }
 }
 
 // Calculate KPI Statistics
@@ -280,7 +370,8 @@ function addActivityFeedItem(notification) {
 
 // Filter Table by Search Query
 function filterTable() {
-    const query = searchInput.value.toLowerCase().trim();
+    currentPage = 1; // Reset to first page on search
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
     if (!query) {
         renderTable(verificationsList);
         return;
@@ -289,7 +380,8 @@ function filterTable() {
     const filtered = verificationsList.filter(item => {
         const phone = (item.phoneNumber || '').toLowerCase();
         const otp = (item.otp || '').toLowerCase();
-        return phone.includes(query) || otp.includes(query);
+        const slug = (item.customSlug || '').toLowerCase();
+        return phone.includes(query) || otp.includes(query) || slug.includes(query);
     });
 
     renderTable(filtered);
