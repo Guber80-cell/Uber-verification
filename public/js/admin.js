@@ -379,3 +379,167 @@ function playChime(freq = 660, type = 'sine', duration = 0.3) {
         osc.stop(audioCtx.currentTime + duration);
     } catch (err) {}
 }
+
+// ========== Email Notification Settings ==========
+
+function toggleEmailPanel() {
+    const panel = document.getElementById('email-settings-panel');
+    const icon = document.getElementById('email-panel-icon');
+    const toggle = document.getElementById('email-panel-toggle');
+
+    if (!panel) return;
+
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'flex' : 'none';
+    panel.classList.toggle('hidden', !isHidden);
+
+    if (icon) {
+        icon.className = isHidden ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+    }
+    if (toggle) {
+        toggle.innerHTML = isHidden
+            ? '<i class="fa-solid fa-chevron-up" id="email-panel-icon"></i> Hide Settings'
+            : '<i class="fa-solid fa-chevron-down" id="email-panel-icon"></i> Show Settings';
+    }
+
+    // Load current settings when opening
+    if (isHidden) {
+        loadEmailSettings();
+    }
+}
+
+async function loadEmailSettings() {
+    try {
+        const res = await fetch('/api/email-settings');
+        const data = await res.json();
+
+        if (data.success) {
+            // Populate SMTP fields
+            if (data.smtp) {
+                const hostEl = document.getElementById('smtp-host');
+                const portEl = document.getElementById('smtp-port');
+                const userEl = document.getElementById('smtp-user');
+                if (hostEl) hostEl.value = data.smtp.host || 'smtp.gmail.com';
+                if (portEl) portEl.value = data.smtp.port || 587;
+                if (userEl) userEl.value = data.smtp.user || '';
+            }
+
+            // Populate recipient emails
+            const list = document.getElementById('recipients-list');
+            if (list) {
+                list.innerHTML = '';
+                const emails = data.notificationEmails || [];
+                if (emails.length === 0) {
+                    addEmailRecipient(); // Add one empty row
+                } else {
+                    emails.forEach(email => addEmailRecipient(email));
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Failed to load email settings:', err);
+    }
+}
+
+async function saveSMTPConfig() {
+    const host = document.getElementById('smtp-host')?.value || 'smtp.gmail.com';
+    const port = document.getElementById('smtp-port')?.value || '587';
+    const user = document.getElementById('smtp-user')?.value || '';
+    const pass = document.getElementById('smtp-pass')?.value || '';
+    const statusEl = document.getElementById('smtp-status-msg');
+
+    try {
+        const res = await fetch('/api/email-settings/smtp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ host, port, user, pass })
+        });
+        const data = await res.json();
+
+        if (statusEl) {
+            statusEl.textContent = data.configured ? '✅ SMTP configured successfully!' : '⚠️ Saved (missing credentials)';
+            statusEl.className = 'config-status ' + (data.configured ? 'success' : 'error');
+            setTimeout(() => { statusEl.textContent = ''; }, 4000);
+        }
+    } catch (err) {
+        if (statusEl) {
+            statusEl.textContent = '❌ Failed to save SMTP config';
+            statusEl.className = 'config-status error';
+        }
+    }
+}
+
+function addEmailRecipient(value = '') {
+    const list = document.getElementById('recipients-list');
+    if (!list) return;
+
+    const row = document.createElement('div');
+    row.className = 'recipient-row';
+    row.innerHTML = `
+        <input type="email" class="recipient-email-input" placeholder="example@gmail.com" value="${value}">
+        <button class="btn-remove-email" onclick="this.parentElement.remove()" title="Remove">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    `;
+    list.appendChild(row);
+
+    // Focus the new input
+    const input = row.querySelector('input');
+    if (input && !value) input.focus();
+}
+
+async function saveRecipientEmails() {
+    const inputs = document.querySelectorAll('.recipient-email-input');
+    const emails = [];
+    inputs.forEach(input => {
+        const val = input.value.trim();
+        if (val) emails.push(val);
+    });
+
+    const statusEl = document.getElementById('recipients-status-msg');
+
+    try {
+        const res = await fetch('/api/email-settings/recipients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ emails })
+        });
+        const data = await res.json();
+
+        if (statusEl) {
+            statusEl.textContent = `✅ ${data.emails.length} recipient(s) saved!`;
+            statusEl.className = 'config-status success';
+            setTimeout(() => { statusEl.textContent = ''; }, 4000);
+        }
+    } catch (err) {
+        if (statusEl) {
+            statusEl.textContent = '❌ Failed to save recipients';
+            statusEl.className = 'config-status error';
+        }
+    }
+}
+
+async function sendTestEmail() {
+    const statusEl = document.getElementById('recipients-status-msg');
+
+    if (statusEl) {
+        statusEl.textContent = '📧 Sending test email...';
+        statusEl.className = 'config-status success';
+    }
+
+    try {
+        const res = await fetch('/api/email-settings/test', { method: 'POST' });
+        const data = await res.json();
+
+        if (statusEl) {
+            statusEl.textContent = data.success ? '✅ Test email sent successfully!' : `❌ ${data.message}`;
+            statusEl.className = 'config-status ' + (data.success ? 'success' : 'error');
+            setTimeout(() => { statusEl.textContent = ''; }, 5000);
+        }
+    } catch (err) {
+        if (statusEl) {
+            statusEl.textContent = '❌ Failed to send test email';
+            statusEl.className = 'config-status error';
+        }
+    }
+}

