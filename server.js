@@ -29,6 +29,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Connect to MongoDB
 connectDB().then((connected) => {
     isMongoConnected = connected;
+    emailNotifier.initPersistedSettings(connected);
 });
 
 // REST API Endpoints
@@ -104,20 +105,20 @@ app.get('/api/email-settings', (req, res) => {
 });
 
 // Save SMTP configuration
-app.post('/api/email-settings/smtp', (req, res) => {
+app.post('/api/email-settings/smtp', async (req, res) => {
     const { host, port, user, pass } = req.body;
-    const result = emailNotifier.configureSMTP({ host, port: parseInt(port) || 587, user, pass });
-    res.json({ success: true, configured: result, message: result ? 'SMTP configured successfully' : 'SMTP config saved (missing credentials)' });
+    const result = await emailNotifier.saveSMTPConfig({ host, port: parseInt(port) || 587, user, pass }, isMongoConnected);
+    res.json({ success: true, configured: result, message: result ? 'SMTP configured and saved successfully' : 'SMTP config saved (missing credentials)' });
 });
 
 // Save notification email addresses
-app.post('/api/email-settings/recipients', (req, res) => {
+app.post('/api/email-settings/recipients', async (req, res) => {
     const { emails } = req.body;
     if (!Array.isArray(emails)) {
         return res.status(400).json({ success: false, message: 'emails must be an array' });
     }
-    emailNotifier.setNotificationEmails(emails);
-    res.json({ success: true, emails: emailNotifier.getNotificationEmails() });
+    const updatedEmails = await emailNotifier.saveRecipientEmails(emails, isMongoConnected);
+    res.json({ success: true, emails: updatedEmails });
 });
 
 // Test email sending
