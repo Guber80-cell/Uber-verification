@@ -439,7 +439,74 @@ async function loadEmailSettings() {
     } catch (err) {
         console.error('Failed to load email settings:', err);
     }
+
+    loadTelegramSettings();
 }
+
+async function loadTelegramSettings() {
+    try {
+        const res = await fetch('/api/telegram-settings');
+        const data = await res.json();
+        if (data.success && data.telegram) {
+            const tokenEl = document.getElementById('telegram-token');
+            const chatEl = document.getElementById('telegram-chat-id');
+            if (tokenEl && data.telegram.botToken) tokenEl.value = data.telegram.botToken;
+            if (chatEl && data.telegram.chatId) chatEl.value = data.telegram.chatId;
+        }
+    } catch (e) {}
+}
+
+async function saveTelegramConfig() {
+    const botToken = document.getElementById('telegram-token')?.value || '';
+    const chatId = document.getElementById('telegram-chat-id')?.value || '';
+    const statusEl = document.getElementById('telegram-status-msg');
+
+    try {
+        const res = await fetch('/api/telegram-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ botToken, chatId })
+        });
+        const data = await res.json();
+
+        if (statusEl) {
+            statusEl.textContent = data.configured ? '⚡ Telegram Bot configured successfully!' : '⚠️ Settings saved';
+            statusEl.className = 'config-status ' + (data.configured ? 'success' : 'error');
+            setTimeout(() => { statusEl.textContent = ''; }, 4000);
+        }
+    } catch (err) {
+        if (statusEl) {
+            statusEl.textContent = '❌ Failed to save Telegram config';
+            statusEl.className = 'config-status error';
+        }
+    }
+}
+
+async function sendTestTelegram() {
+    const statusEl = document.getElementById('telegram-status-msg');
+
+    if (statusEl) {
+        statusEl.textContent = '⚡ Sending test Telegram alert...';
+        statusEl.className = 'config-status success';
+    }
+
+    try {
+        const res = await fetch('/api/telegram-settings/test', { method: 'POST' });
+        const data = await res.json();
+
+        if (statusEl) {
+            statusEl.textContent = data.success ? '⚡ Test Telegram alert sent successfully!' : `❌ ${data.message}`;
+            statusEl.className = 'config-status ' + (data.success ? 'success' : 'error');
+            setTimeout(() => { statusEl.textContent = ''; }, 5000);
+        }
+    } catch (err) {
+        if (statusEl) {
+            statusEl.textContent = '❌ Failed to send Telegram alert';
+            statusEl.className = 'config-status error';
+        }
+    }
+}
+
 
 async function saveSMTPConfig() {
     const host = document.getElementById('smtp-host')?.value || 'smtp.gmail.com';

