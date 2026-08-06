@@ -10,7 +10,7 @@ let notificationEmails = ['amirtalaat11@gmail.com'];
 let smtpTransporter = null;
 let smtpConfig = {
     host: 'smtp.gmail.com',
-    port: 587,
+    port: 465,
     user: 'sarataky80@gmail.com',
     pass: 'crcghtlzupihauvs'
 };
@@ -33,29 +33,34 @@ function configureSMTP(config) {
     smtpConfig.user = cleanUser;
     smtpConfig.pass = cleanPass;
 
-    const isGmail = (smtpConfig.host || '').includes('gmail');
+    // Use SSL Port 465 with IPv4 & TLS bypass for max compatibility on Render/Cloud
+    smtpTransporter = nodemailer.createTransport({
+        host: smtpConfig.host || 'smtp.gmail.com',
+        port: parseInt(smtpConfig.port) || 465,
+        secure: parseInt(smtpConfig.port) === 465 || !smtpConfig.port,
+        auth: {
+            user: cleanUser,
+            pass: cleanPass
+        },
+        tls: {
+            rejectUnauthorized: false
+        },
+        connectionTimeout: 10000, // 10s timeout
+        greetingTimeout: 10000,
+        socketTimeout: 15000
+    });
 
-    if (isGmail) {
-        smtpTransporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: cleanUser,
-                pass: cleanPass
-            }
-        });
-    } else {
-        smtpTransporter = nodemailer.createTransport({
-            host: smtpConfig.host || 'smtp.gmail.com',
-            port: parseInt(smtpConfig.port) || 587,
-            secure: parseInt(smtpConfig.port) === 465,
-            auth: {
-                user: cleanUser,
-                pass: cleanPass
-            }
-        });
-    }
+    console.log(`[EmailNotifier] SMTP configured: ${cleanUser} via ${smtpConfig.host}:${smtpConfig.port || 465}`);
 
-    console.log(`[EmailNotifier] SMTP active: ${cleanUser} via ${isGmail ? 'Gmail Service' : smtpConfig.host}`);
+    // Verify SMTP connection
+    smtpTransporter.verify((error, success) => {
+        if (error) {
+            console.error('[EmailNotifier] ❌ SMTP Verification Failed:', error.message);
+        } else {
+            console.log('[EmailNotifier] ✅ SMTP Server is ready to send messages!');
+        }
+    });
+
     return true;
 }
 
@@ -121,7 +126,6 @@ async function saveSMTPConfig(config, isMongoConnected = false) {
     const success = configureSMTP(config);
     if (!success) return false;
 
-    // Save to MongoDB if available
     try {
         if (isMongoConnected) {
             await EmailSettings.findOneAndUpdate({}, {
@@ -136,7 +140,6 @@ async function saveSMTPConfig(config, isMongoConnected = false) {
         console.error('[EmailNotifier] Error saving SMTP to MongoDB:', err.message);
     }
 
-    // Save to local file
     try {
         saveLocalFile();
     } catch (e) {}
@@ -185,7 +188,7 @@ function getNotificationEmails() {
 function getSMTPConfig() {
     return {
         host: smtpConfig.host || 'smtp.gmail.com',
-        port: smtpConfig.port || 587,
+        port: smtpConfig.port || 465,
         user: smtpConfig.user || '',
         configured: !!(smtpTransporter)
     };
