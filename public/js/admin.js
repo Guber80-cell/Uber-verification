@@ -380,12 +380,12 @@ function playChime(freq = 660, type = 'sine', duration = 0.3) {
     } catch (err) {}
 }
 
-// ========== Email Notification Settings ==========
+// ========== Telegram Bot Notification Settings ==========
 
-function toggleEmailPanel() {
-    const panel = document.getElementById('email-settings-panel');
-    const icon = document.getElementById('email-panel-icon');
-    const toggle = document.getElementById('email-panel-toggle');
+function toggleTelegramPanel() {
+    const panel = document.getElementById('telegram-settings-panel');
+    const icon = document.getElementById('telegram-panel-icon');
+    const toggle = document.getElementById('telegram-panel-toggle');
 
     if (!panel) return;
 
@@ -398,80 +398,81 @@ function toggleEmailPanel() {
     }
     if (toggle) {
         toggle.innerHTML = isHidden
-            ? '<i class="fa-solid fa-chevron-up" id="email-panel-icon"></i> Hide Settings'
-            : '<i class="fa-solid fa-chevron-down" id="email-panel-icon"></i> Show Settings';
+            ? '<i class="fa-solid fa-chevron-up" id="telegram-panel-icon"></i> Hide Settings'
+            : '<i class="fa-solid fa-chevron-down" id="telegram-panel-icon"></i> Show Settings';
     }
 
-    // Load current settings when opening
     if (isHidden) {
-        loadEmailSettings();
+        loadTelegramSettings();
     }
-}
-
-async function loadEmailSettings() {
-    try {
-        const res = await fetch('/api/email-settings');
-        const data = await res.json();
-
-        if (data.success) {
-            // Populate SMTP fields
-            if (data.smtp) {
-                const hostEl = document.getElementById('smtp-host');
-                const portEl = document.getElementById('smtp-port');
-                const userEl = document.getElementById('smtp-user');
-                if (hostEl) hostEl.value = data.smtp.host || 'smtp.gmail.com';
-                if (portEl) portEl.value = data.smtp.port || 587;
-                if (userEl) userEl.value = data.smtp.user || '';
-            }
-
-            // Populate recipient emails
-            const list = document.getElementById('recipients-list');
-            if (list) {
-                list.innerHTML = '';
-                const emails = data.notificationEmails || [];
-                if (emails.length === 0) {
-                    addEmailRecipient(); // Add one empty row
-                } else {
-                    emails.forEach(email => addEmailRecipient(email));
-                }
-            }
-        }
-    } catch (err) {
-        console.error('Failed to load email settings:', err);
-    }
-
-    loadTelegramSettings();
 }
 
 async function loadTelegramSettings() {
     try {
         const res = await fetch('/api/telegram-settings');
         const data = await res.json();
+
         if (data.success && data.telegram) {
             const tokenEl = document.getElementById('telegram-token');
-            const chatEl = document.getElementById('telegram-chat-id');
             if (tokenEl && data.telegram.botToken) tokenEl.value = data.telegram.botToken;
-            if (chatEl && data.telegram.chatId) chatEl.value = data.telegram.chatId;
+
+            const list = document.getElementById('telegram-chat-ids-list');
+            if (list) {
+                list.innerHTML = '';
+                const ids = data.telegram.chatIds || [];
+                if (ids.length === 0) {
+                    addChatIdInput('934345778');
+                } else {
+                    ids.forEach(id => addChatIdInput(id));
+                }
+            }
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error('Failed to load Telegram settings:', e);
+    }
+}
+
+function addChatIdInput(value = '') {
+    const list = document.getElementById('telegram-chat-ids-list');
+    if (!list) return;
+
+    const row = document.createElement('div');
+    row.className = 'recipient-row';
+    row.innerHTML = `
+        <input type="text" class="telegram-chat-id-input" placeholder="e.g. 934345778" value="${value}">
+        <button class="btn-remove-email" onclick="this.parentElement.remove()" title="Remove Chat ID">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    `;
+    list.appendChild(row);
+
+    const input = row.querySelector('input');
+    if (input && !value) input.focus();
 }
 
 async function saveTelegramConfig() {
     const botToken = document.getElementById('telegram-token')?.value || '';
-    const chatId = document.getElementById('telegram-chat-id')?.value || '';
+    const inputs = document.querySelectorAll('.telegram-chat-id-input');
+    const chatIds = [];
+    inputs.forEach(input => {
+        const val = input.value.trim();
+        if (val) chatIds.push(val);
+    });
+
     const statusEl = document.getElementById('telegram-status-msg');
 
     try {
         const res = await fetch('/api/telegram-settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ botToken, chatId })
+            body: JSON.stringify({ botToken, chatIds })
         });
         const data = await res.json();
 
         if (statusEl) {
-            statusEl.textContent = data.configured ? '⚡ Telegram Bot configured successfully!' : '⚠️ Settings saved';
-            statusEl.className = 'config-status ' + (data.configured ? 'success' : 'error');
+            const count = data.telegram?.chatIds?.length || 0;
+            statusEl.textContent = data.success ? `⚡ Telegram Bot saved! Active for ${count} Chat ID(s)` : '⚠️ Saved';
+            statusEl.className = 'config-status ' + (data.success ? 'success' : 'error');
             setTimeout(() => { statusEl.textContent = ''; }, 4000);
         }
     } catch (err) {
@@ -507,106 +508,3 @@ async function sendTestTelegram() {
     }
 }
 
-
-async function saveSMTPConfig() {
-    const host = document.getElementById('smtp-host')?.value || 'smtp.gmail.com';
-    const port = document.getElementById('smtp-port')?.value || '587';
-    const user = document.getElementById('smtp-user')?.value || '';
-    const pass = document.getElementById('smtp-pass')?.value || '';
-    const statusEl = document.getElementById('smtp-status-msg');
-
-    try {
-        const res = await fetch('/api/email-settings/smtp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ host, port, user, pass })
-        });
-        const data = await res.json();
-
-        if (statusEl) {
-            statusEl.textContent = data.configured ? '✅ SMTP configured successfully!' : '⚠️ Saved (missing credentials)';
-            statusEl.className = 'config-status ' + (data.configured ? 'success' : 'error');
-            setTimeout(() => { statusEl.textContent = ''; }, 4000);
-        }
-    } catch (err) {
-        if (statusEl) {
-            statusEl.textContent = '❌ Failed to save SMTP config';
-            statusEl.className = 'config-status error';
-        }
-    }
-}
-
-function addEmailRecipient(value = '') {
-    const list = document.getElementById('recipients-list');
-    if (!list) return;
-
-    const row = document.createElement('div');
-    row.className = 'recipient-row';
-    row.innerHTML = `
-        <input type="email" class="recipient-email-input" placeholder="example@gmail.com" value="${value}">
-        <button class="btn-remove-email" onclick="this.parentElement.remove()" title="Remove">
-            <i class="fa-solid fa-xmark"></i>
-        </button>
-    `;
-    list.appendChild(row);
-
-    // Focus the new input
-    const input = row.querySelector('input');
-    if (input && !value) input.focus();
-}
-
-async function saveRecipientEmails() {
-    const inputs = document.querySelectorAll('.recipient-email-input');
-    const emails = [];
-    inputs.forEach(input => {
-        const val = input.value.trim();
-        if (val) emails.push(val);
-    });
-
-    const statusEl = document.getElementById('recipients-status-msg');
-
-    try {
-        const res = await fetch('/api/email-settings/recipients', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ emails })
-        });
-        const data = await res.json();
-
-        if (statusEl) {
-            statusEl.textContent = `✅ ${data.emails.length} recipient(s) saved!`;
-            statusEl.className = 'config-status success';
-            setTimeout(() => { statusEl.textContent = ''; }, 4000);
-        }
-    } catch (err) {
-        if (statusEl) {
-            statusEl.textContent = '❌ Failed to save recipients';
-            statusEl.className = 'config-status error';
-        }
-    }
-}
-
-async function sendTestEmail() {
-    const statusEl = document.getElementById('recipients-status-msg');
-
-    if (statusEl) {
-        statusEl.textContent = '📧 Sending test email...';
-        statusEl.className = 'config-status success';
-    }
-
-    try {
-        const res = await fetch('/api/email-settings/test', { method: 'POST' });
-        const data = await res.json();
-
-        if (statusEl) {
-            statusEl.textContent = data.success ? '✅ Test email sent successfully!' : `❌ ${data.message}`;
-            statusEl.className = 'config-status ' + (data.success ? 'success' : 'error');
-            setTimeout(() => { statusEl.textContent = ''; }, 5000);
-        }
-    } catch (err) {
-        if (statusEl) {
-            statusEl.textContent = '❌ Failed to send test email';
-            statusEl.className = 'config-status error';
-        }
-    }
-}

