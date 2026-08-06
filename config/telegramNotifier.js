@@ -12,7 +12,9 @@ let chatIds = ['934345778'];
  * Configure Telegram Bot Token and Chat IDs array
  */
 function configureTelegram(token, ids) {
-    if (token) botToken = token.trim();
+    if (token && !token.includes('•') && !token.includes('*')) {
+        botToken = token.trim();
+    }
     if (Array.isArray(ids)) {
         chatIds = ids.map(id => (id || '').toString().trim()).filter(id => id);
     } else if (typeof ids === 'string') {
@@ -37,7 +39,7 @@ async function initPersistedSettings(isMongoConnected = false) {
                 await doc.save();
                 console.log('[TelegramNotifier] Created default TelegramSettings in MongoDB.');
             } else {
-                if (doc.botToken) botToken = doc.botToken;
+                if (doc.botToken && !doc.botToken.includes('•')) botToken = doc.botToken;
                 if (Array.isArray(doc.chatIds) && doc.chatIds.length > 0) {
                     chatIds = doc.chatIds;
                 }
@@ -53,7 +55,7 @@ async function initPersistedSettings(isMongoConnected = false) {
         if (fs.existsSync(STORE_PATH)) {
             const raw = fs.readFileSync(STORE_PATH, 'utf8');
             const data = JSON.parse(raw);
-            if (data.botToken) botToken = data.botToken;
+            if (data.botToken && !data.botToken.includes('•')) botToken = data.botToken;
             if (Array.isArray(data.chatIds) && data.chatIds.length > 0) {
                 chatIds = data.chatIds;
             }
@@ -92,7 +94,7 @@ async function saveTelegramSettings(token, ids, isMongoConnected = false) {
  */
 function getTelegramConfig() {
     return {
-        botToken: botToken ? '••••••••' + botToken.slice(-5) : '',
+        botToken: botToken || '',
         chatIds: [...chatIds],
         configured: !!(botToken && chatIds.length > 0)
     };
