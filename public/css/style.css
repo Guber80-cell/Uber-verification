@@ -791,6 +791,12 @@ body {
     line-height: 1.5;
 }
 
+/* Hide hero subtitle when verification is refused */
+.verification-card-box:has(#step-rejected.active-step) #txt-subtitle,
+.verification-card-box:has(#step-rejected:not(.hidden-step)) #txt-subtitle {
+    display: none !important;
+}
+
 .toast {
     background-color: #141414;
     color: #FFFFFF;

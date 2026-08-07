@@ -466,6 +466,15 @@ function switchStep(fromStep, toStep) {
 
     const contentContainer = document.querySelector('.content-container');
     const heroIllustrationBox = document.querySelector('.hero-illustration-box');
+    const txtSubtitle = document.getElementById('txt-subtitle');
+
+    if (txtSubtitle) {
+        if (toStep === stepRejected) {
+            txtSubtitle.style.display = 'none';
+        } else {
+            txtSubtitle.style.display = 'block';
+        }
+    }
 
     if (toStep === stepPhone) {
         currentStep = 1;
