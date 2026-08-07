@@ -193,6 +193,21 @@ body {
     margin-bottom: 28px;
 }
 
+/* Step View Visibility Rules */
+.step-view {
+    width: 100%;
+}
+
+.step-view.hidden-step,
+.hidden-step,
+.hidden {
+    display: none !important;
+}
+
+.step-view.active-step {
+    display: block !important;
+}
+
 /* Form Controls */
 .input-group {
     margin-bottom: 24px;

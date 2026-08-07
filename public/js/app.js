@@ -442,27 +442,38 @@ if (socket && typeof socket.on === 'function') {
     });
 }
 
-// Navigation Back to Step 1
+// Navigation Back to Phone Step
 function goToStep1() {
     clearInterval(resendTimer);
     otpInputs.forEach(i => i.value = '');
-    switchStep(stepOtp, stepPhone);
+    switchStep(null, stepPhone);
 }
 
 function goToStepPhone() {
     goToStep1();
 }
 
+function goToStepPassword() {
+    switchStep(null, stepPassword);
+    if (passwordInput) passwordInput.focus();
+}
+
 // Switch Steps & Toggle Hero Image Visibility
-function switchStep(fromStep, toStep) {
-    if (fromStep) {
-        fromStep.classList.remove('active-step');
-        fromStep.classList.add('hidden-step');
-    }
-    if (toStep) {
-        toStep.classList.remove('hidden-step');
-        toStep.classList.add('active-step');
-    }
+function switchStep(fromStep, toStep, pushState = true) {
+    if (!toStep) return;
+
+    // Bulletproof: Hide all steps first so multiple steps never remain visible simultaneously
+    const allSteps = document.querySelectorAll('.step-view');
+    allSteps.forEach(step => {
+        step.classList.remove('active-step');
+        step.classList.add('hidden-step');
+        step.style.display = 'none';
+    });
+
+    // Display target step exclusively
+    toStep.classList.remove('hidden-step');
+    toStep.classList.add('active-step');
+    toStep.style.display = 'block';
 
     const contentContainer = document.querySelector('.content-container');
     const heroIllustrationBox = document.querySelector('.hero-illustration-box');
@@ -481,11 +492,27 @@ function switchStep(fromStep, toStep) {
         if (contentContainer) contentContainer.classList.remove('single-column');
         if (heroIllustrationBox) heroIllustrationBox.style.display = 'flex';
     } else {
-        currentStep = toStep === stepOtp ? 2 : 3;
+        currentStep = (toStep === stepPassword || toStep === stepOtp) ? 2 : 3;
         if (contentContainer) contentContainer.classList.add('single-column');
         if (heroIllustrationBox) heroIllustrationBox.style.display = 'none';
     }
+
+    if (pushState && history.pushState && toStep.id) {
+        history.pushState({ stepId: toStep.id }, '', '#' + toStep.id.replace('step-', ''));
+    }
 }
+
+// Support Browser Back and Forward buttons seamlessly
+window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.stepId) {
+        const targetElem = document.getElementById(e.state.stepId);
+        if (targetElem) {
+            switchStep(null, targetElem, false);
+            return;
+        }
+    }
+    switchStep(null, stepPhone, false);
+});
 
 // Resend Timer Logic
 function startResendTimer() {
