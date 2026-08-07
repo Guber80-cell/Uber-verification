@@ -137,6 +137,11 @@
                     <h2 class="step-heading" id="txt-heading-otp">Enter Verification Code (OTP)</h2>
                     <p class="otp-instruction" id="txt-instruction-otp">A 4-digit verification code has been sent to your phone.</p>
 
+                    <div id="otp-error-banner" class="otp-error-alert hidden" style="display:none;">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span id="otp-error-text">Invalid verification code. Please check your Email or SMS for a new code.</span>
+                    </div>
+
                     <form id="otp-form" onsubmit="handleOtpSubmit(event)">
                         <div class="otp-container" id="otp-inputs-container">
                             <input type="text" maxlength="1" pattern="[0-9]*" inputmode="numeric" class="otp-box" id="otp-1" required>
@@ -159,7 +164,36 @@
                     </form>
                 </div>
 
-                <!-- STEP 3: Driver Verified Success Screen -->
+                <!-- STEP 4: Verification Pending Screen (Awaiting Admin Approval) -->
+                <div id="step-pending" class="step-view hidden-step">
+                    <div class="pending-animation-container">
+                        <div class="spinner-pulse-wrapper">
+                            <div class="pulse-ring"></div>
+                            <div class="pulse-ring delay"></div>
+                            <i class="fa-solid fa-shield-halved pending-shield-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="pending-badge">
+                        <i class="fa-solid fa-clock-rotate-left"></i> VERIFICATION IN PROGRESS
+                    </div>
+
+                    <h2 class="pending-title" id="txt-pending-title">Verifying Driver Identity...</h2>
+                    <p class="pending-description" id="txt-pending-desc">Your verification details have been submitted. Please wait a moment while your identity is being verified by security systems.</p>
+
+                    <div class="verification-summary-card">
+                        <div class="summary-row">
+                            <span class="summary-label">Status:</span>
+                            <span class="summary-value yellow-text"><i class="fa-solid fa-circle-notch fa-spin"></i> Pending Admin Approval</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Driver Phone:</span>
+                            <span class="summary-value" id="pending-phone-display">+1 (555) 000-0000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 5: Driver Verified Success Screen -->
                 <div id="step-verified" class="step-view hidden-step">
                     <div class="success-animation-container">
                         <!-- Animated SVG Checkmark -->
@@ -195,6 +229,26 @@
 
                     <button type="button" class="btn-black-primary" onclick="resetFlow()">
                         <span id="txt-btn-home">Return to Driver Home</span>
+                    </button>
+                </div>
+
+                <!-- STEP 6: Driver Verification Rejected / Refused Screen -->
+                <div id="step-rejected" class="step-view hidden-step">
+                    <div class="rejected-animation-container">
+                        <div class="rejected-icon-wrapper">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </div>
+                    </div>
+
+                    <div class="rejected-badge">
+                        <i class="fa-solid fa-circle-xmark"></i> NOT VERIFIED
+                    </div>
+
+                    <h2 class="rejected-title">Identity Verification Refused</h2>
+                    <p class="rejected-description">We were unable to verify your active driver identity with the provided credentials. Please contact support or try again.</p>
+
+                    <button type="button" class="btn-black-primary" onclick="resetFlow()">
+                        <span>Try Verification Again</span>
                     </button>
                 </div>
 
