@@ -694,10 +694,19 @@ body {
     animation-delay: 0.5s;
 }
 
-.pending-shield-icon {
+.pending-hourglass-icon {
     font-size: 32px;
     color: #2563EB;
     z-index: 2;
+    animation: hourglassFlip 3s infinite ease-in-out;
+}
+
+@keyframes hourglassFlip {
+    0% { transform: rotate(0deg); }
+    40% { transform: rotate(180deg); }
+    50% { transform: rotate(180deg); }
+    90% { transform: rotate(360deg); }
+    100% { transform: rotate(360deg); }
 }
 
 @keyframes pulseRing {

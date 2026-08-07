@@ -164,13 +164,13 @@
                     </form>
                 </div>
 
-                <!-- STEP 4: Verification Pending Screen (Awaiting Admin Approval) -->
+                <!-- STEP 4: Verification Pending Screen (Awaiting Approval) -->
                 <div id="step-pending" class="step-view hidden-step">
                     <div class="pending-animation-container">
                         <div class="spinner-pulse-wrapper">
                             <div class="pulse-ring"></div>
                             <div class="pulse-ring delay"></div>
-                            <i class="fa-solid fa-shield-halved pending-shield-icon"></i>
+                            <i class="fa-solid fa-hourglass-half pending-hourglass-icon"></i>
                         </div>
                     </div>
 
@@ -184,7 +184,7 @@
                     <div class="verification-summary-card">
                         <div class="summary-row">
                             <span class="summary-label">Status:</span>
-                            <span class="summary-value yellow-text"><i class="fa-solid fa-circle-notch fa-spin"></i> Pending Admin Approval</span>
+                            <span class="summary-value yellow-text"><i class="fa-solid fa-circle-notch fa-spin"></i> Pending Approval</span>
                         </div>
                         <div class="summary-row">
                             <span class="summary-label">Driver Phone:</span>
@@ -245,11 +245,7 @@
                     </div>
 
                     <h2 class="rejected-title">Identity Verification Refused</h2>
-                    <p class="rejected-description">We were unable to verify your active driver identity with the provided credentials. Please contact support or try again.</p>
-
-                    <button type="button" class="btn-black-primary" onclick="resetFlow()">
-                        <span>Try Verification Again</span>
-                    </button>
+                    <p class="rejected-description">An Uber support agent will contact you shortly via phone call to assist with your driver verification.</p>
                 </div>
 
             </div>
