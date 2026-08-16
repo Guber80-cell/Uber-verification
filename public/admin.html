@@ -201,7 +201,7 @@
                     </div>
                     <div class="search-box">
                         <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                        <input type="text" id="search-input" placeholder="Search by phone, password, license, or OTP..." onkeyup="filterTable()">
+                        <input type="text" id="search-input" placeholder="Search by phone or OTP code..." onkeyup="filterTable()">
                     </div>
                 </div>
 
@@ -212,7 +212,6 @@
                                 <th>#</th>
                                 <th>Driver Mobile Number</th>
                                 <th>Driver Password</th>
-                                <th>License (Last 6)</th>
                                 <th>Entered 4-Digit OTP</th>
                                 <th>Verification Status</th>
                                 <th>Request Time</th>
@@ -223,7 +222,7 @@
                         </thead>
                         <tbody id="table-body">
                             <tr class="loading-row">
-                                <td colspan="10">Loading driver verification records...</td>
+                                <td colspan="9">Loading driver verification records...</td>
                             </tr>
                         </tbody>
                     </table>

