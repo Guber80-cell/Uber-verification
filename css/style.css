@@ -170,7 +170,6 @@ body {
 
 
 
-
 /* Left Column Card Box */
 .verification-card-box {
     background: var(--bg-card);
@@ -483,16 +482,24 @@ body {
 }
 
 @keyframes stroke {
-    100% { stroke-dashoffset: 0; }
+    100% {
+        stroke-dashoffset: 0;
+    }
 }
 
 @keyframes scale {
-    0%, 100% { transform: none; }
-    50% { transform: scale3d(1.1, 1.1, 1); }
+    0%, 100% {
+        transform: none;
+    }
+    50% {
+        transform: scale3d(1.1, 1.1, 1);
+    }
 }
 
 @keyframes fill {
-    100% { box-shadow: inset 0px 0px 0px 40px rgba(5, 163, 87, 0.1); }
+    100% {
+        box-shadow: inset 0px 0px 0px 40px rgba(5, 163, 87, 0.1);
+    }
 }
 
 .verified-badge {
@@ -594,6 +601,54 @@ body {
 .promo-overlay h3 {
     font-size: 20px;
     font-weight: 700;
+}
+
+.promo-overlay p {
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.services-grid {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.service-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-secondary);
+    transition: var(--transition);
+}
+
+.service-item:hover {
+    background-color: #EAEAEA;
+}
+
+.service-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: #000000;
+    color: #FFFFFF;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+}
+
+.service-info h4 {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.service-info p {
+    font-size: 12px;
+    color: var(--text-secondary);
 }
 
 /* Toast Container Notification */
@@ -757,52 +812,25 @@ body {
     display: none !important;
 }
 
-.promo-overlay p {
-    font-size: 12px;
-    opacity: 0.9;
-}
-
-.services-grid {
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.service-item {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 12px;
-    border-radius: var(--radius-sm);
-    background-color: var(--bg-secondary);
-    transition: var(--transition);
-}
-
-.service-item:hover {
-    background-color: #EAEAEA;
-}
-
-.service-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background-color: #000000;
+.toast {
+    background-color: #141414;
     color: #FFFFFF;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 18px;
-}
-
-.service-info h4 {
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
     font-size: 14px;
-    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow-md);
+    animation: slideUp 0.3s ease forwards;
 }
 
-.service-info p {
-    font-size: 12px;
-    color: var(--text-secondary);
+.toast.toast-error { background-color: #E53935; }
+.toast.toast-success { background-color: #05A357; }
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .hidden { display: none !important; }
@@ -848,6 +876,7 @@ body {
 
 /* Mobile (≤ 600px) */
 @media (max-width: 600px) {
+    /* Navbar */
     .navbar {
         height: 56px;
     }
@@ -873,6 +902,7 @@ body {
         padding: 5px 10px;
     }
 
+    /* Main layout */
     .main-wrapper {
         padding: 16px 12px;
         align-items: flex-start;
@@ -882,6 +912,7 @@ body {
         gap: 16px;
     }
 
+    /* Card */
     .verification-card-box {
         padding: 24px 20px;
         border-radius: var(--radius-md);
@@ -897,6 +928,11 @@ body {
         margin-bottom: 20px;
     }
 
+    /* Phone input */
+    .phone-input-wrapper {
+        border-radius: var(--radius-sm);
+    }
+
     .country-code-select {
         font-size: 13px;
         padding: 0 22px 0 10px;
@@ -907,12 +943,14 @@ body {
         padding: 13px 12px;
     }
 
+    /* Button */
     .btn-black-primary {
         padding: 14px 20px;
         font-size: 15px;
         border-radius: var(--radius-sm);
     }
 
+    /* OTP Boxes */
     .otp-container {
         gap: 10px;
     }
@@ -933,6 +971,7 @@ body {
         margin-bottom: 18px;
     }
 
+    /* Success screen */
     .success-animation-container {
         margin: 16px 0;
     }
@@ -956,10 +995,12 @@ body {
         gap: 2px;
     }
 
+    /* Security note */
     .security-note {
         font-size: 12px;
     }
 
+    /* Toast */
     .toast-container {
         bottom: 16px;
         right: 12px;
@@ -971,7 +1012,7 @@ body {
     }
 }
 
-/* Extra small (≤ 380px — iPhone SE and similar) */
+/* Extra small (≤ 380px — small phones like iPhone SE) */
 @media (max-width: 380px) {
     .verification-card-box {
         padding: 20px 16px;
